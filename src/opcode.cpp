@@ -1,22 +1,18 @@
 #include "gameboy.hpp"
 
-void GameBoy::setFlag(Byte bit)
-{
+void GameBoy::setFlag(Byte bit) {
 	AF.lo |= (1 << bit);
 }
 
-void GameBoy::resetFlag(Byte bit)
-{
+void GameBoy::resetFlag(Byte bit) {
 	AF.lo &= ~(1 << bit);
 }
 
-bool GameBoy::getFlag(Byte bit) const
-{
+bool GameBoy::getFlag(Byte bit) const {
 	return (AF.lo >> bit) & 1;
 }
 
-Word GameBoy::getWordPC()
-{
+Word GameBoy::getWordPC() {
 	RegisterPair word;
 
 	//remember little endianness
@@ -26,13 +22,11 @@ Word GameBoy::getWordPC()
 	return word.reg;
 }
 
-Byte GameBoy::getBytePC()
-{
+Byte GameBoy::getBytePC() {
 	return addressSpace[PC + 1];
 }
 
-Word GameBoy::getWordSP()
-{
+Word GameBoy::getWordSP() {
 	RegisterPair word;
 
 	//remember little endianness
@@ -42,35 +36,29 @@ Word GameBoy::getWordSP()
 	return word.reg;
 }
 
-Byte GameBoy::getByteSP()
-{
+Byte GameBoy::getByteSP() {
 	return addressSpace[SP++];
 }
 
-void GameBoy::ret()
-{
+void GameBoy::ret() {
 	pop(PC);
 }
 
-template<typename T>
-void GameBoy::ld(T &dest, T src)
-{
+template <typename T>
+void GameBoy::ld(T& dest, T src) {
 	dest = src;
 }
 
-template<typename T>
-void GameBoy::ldW(T dest, T src)
-{
-	if(sizeof(src) == sizeof(Word))
-	{
-		addressSpace[dest] = (Byte) (src & 0xFF00) >> 8;
-		addressSpace[dest + 1] = (Byte) (src & 0xFF);
+template <typename T>
+void GameBoy::ldW(T dest, T src) {
+	if (sizeof(src) == sizeof(Word)) {
+		addressSpace[dest] = (Byte)(src & 0xFF00) >> 8;
+		addressSpace[dest + 1] = (Byte)(src & 0xFF);
 	}
 }
 
-template<typename T>
-void GameBoy::rla(T &reg)
-{
+template <typename T>
+void GameBoy::rla(T& reg) {
 	//printf("0x%.2x\n", REG);
 	//printf("%d\n", GET_FLAG(CARRY_FLAG));
 	bool carry;
@@ -78,17 +66,17 @@ void GameBoy::rla(T &reg)
 	//printf("\n0x%x\n", REG);
 	//printf("0x%x\n\n", REG & ((T)1 << 7));
 
-	if(reg & (1 << 7))
+	if (reg & (1 << 7))
 		carry = true;
 	else
 		carry = false;
 
 	reg <<= 1;
 
-	if(getFlag(CARRY_FLAG))
+	if (getFlag(CARRY_FLAG))
 		reg += 1;
 
-	if(carry)
+	if (carry)
 		setFlag(CARRY_FLAG);
 	else
 		resetFlag(CARRY_FLAG);
@@ -98,32 +86,29 @@ void GameBoy::rla(T &reg)
 	resetFlag(HALFCARRY_FLAG);
 }
 
-template<typename T>
-void GameBoy::add(T &reg, T value)
-{
-	if(sizeof(reg) == sizeof(Byte))
-	{
+template <typename T>
+void GameBoy::add(T& reg, T value) {
+	if (sizeof(reg) == sizeof(Byte)) {
 		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if((((value & 0xF) + (reg & 0xF)) & 0x10) == 0x10)
+		if ((((value & 0xF) + (reg & 0xF)) & 0x10) == 0x10)
 			setFlag(HALFCARRY_FLAG);
 		else
 			resetFlag(HALFCARRY_FLAG);
 		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if((((value & 0xFF) + (reg & 0xFF)) & 0x100) == 0x100)
+		if ((((value & 0xFF) + (reg & 0xFF)) & 0x100) == 0x100)
 			setFlag(CARRY_FLAG);
 		else
 			resetFlag(CARRY_FLAG);
 	}
 
-	if(sizeof(reg) == sizeof(Word))
-	{
+	if (sizeof(reg) == sizeof(Word)) {
 		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if((((value & 0xFFF) + (reg & 0xFFF)) & 0x1000) == 0x1000)
+		if ((((value & 0xFFF) + (reg & 0xFFF)) & 0x1000) == 0x1000)
 			setFlag(HALFCARRY_FLAG);
 		else
 			resetFlag(HALFCARRY_FLAG);
 		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if((((value & 0xFFFF) + (reg & 0xFFFF)) & 0x10000) == 0x10000)
+		if ((((value & 0xFFFF) + (reg & 0xFFFF)) & 0x10000) == 0x10000)
 			setFlag(CARRY_FLAG);
 		else
 			resetFlag(CARRY_FLAG);
@@ -131,21 +116,19 @@ void GameBoy::add(T &reg, T value)
 
 	reg += value;
 
-	if(reg == 0)
+	if (reg == 0)
 		setFlag(ZERO_FLAG);
 	else
 		resetFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
-
 }
 
-template<typename T>
-void GameBoy::orBitwise(T &dest, T src)
-{
+template <typename T>
+void GameBoy::orBitwise(T& dest, T src) {
 	dest |= src;
 
-	if(dest == 0)
+	if (dest == 0)
 		setFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
@@ -153,12 +136,11 @@ void GameBoy::orBitwise(T &dest, T src)
 	resetFlag(CARRY_FLAG);
 }
 
-template<typename T>
-void GameBoy::andBitwise(T &dest, T src)
-{
+template <typename T>
+void GameBoy::andBitwise(T& dest, T src) {
 	dest &= src;
 
-	if(dest == 0)
+	if (dest == 0)
 		setFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
@@ -166,12 +148,11 @@ void GameBoy::andBitwise(T &dest, T src)
 	resetFlag(CARRY_FLAG);
 }
 
-template<typename T>
-void GameBoy::xorBitwise(T &dest, T src)
-{
+template <typename T>
+void GameBoy::xorBitwise(T& dest, T src) {
 	dest ^= src;
 
-	if(dest == 0)
+	if (dest == 0)
 		setFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
@@ -179,12 +160,11 @@ void GameBoy::xorBitwise(T &dest, T src)
 	resetFlag(HALFCARRY_FLAG);
 }
 
-template<typename T>
-void GameBoy::bit(T testBit, T reg)
-{
-	Byte result = reg & (T) (1 << testBit);
+template <typename T>
+void GameBoy::bit(T testBit, T reg) {
+	Byte result = reg & (T)(1 << testBit);
 
-	if(result == 0)
+	if (result == 0)
 		setFlag(ZERO_FLAG);
 	else
 		resetFlag(ZERO_FLAG);
@@ -193,27 +173,24 @@ void GameBoy::bit(T testBit, T reg)
 	setFlag(HALFCARRY_FLAG);
 }
 
-template<typename T>
-bool GameBoy::jrNZ(T offset)
-{
+template <typename T>
+bool GameBoy::jrNZ(T offset) {
 	bool jumped = false;
-	if(!getFlag(ZERO_FLAG)) //if not set
+	if (!getFlag(ZERO_FLAG)) //if not set
 	{
-		PC += (int8_t) offset + 2; //PC moves 2 from the original instruction
+		PC += (int8_t)offset + 2; //PC moves 2 from the original instruction
 		jumped = true;
 	}
 
 	return jumped;
 }
 
-template<typename T>
-void GameBoy::inc(T &reg)
-{
+template <typename T>
+void GameBoy::inc(T& reg) {
 	reg++;
 
-	if(sizeof(reg) == sizeof(Byte))
-	{
-		if(reg == 0)
+	if (sizeof(reg) == sizeof(Byte)) {
+		if (reg == 0)
 			setFlag(ZERO_FLAG);
 		else
 			resetFlag(ZERO_FLAG);
@@ -221,31 +198,27 @@ void GameBoy::inc(T &reg)
 		resetFlag(SUBTRACT_FLAG);
 
 		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if(((((reg - 1) & 0xf) + (reg & 0xf)) & 0x10) == 0x10)
+		if (((((reg - 1) & 0xf) + (reg & 0xf)) & 0x10) == 0x10)
 			setFlag(HALFCARRY_FLAG);
 		else
 			resetFlag(HALFCARRY_FLAG);
-
 	}
 }
 
-template<typename T>
-void GameBoy::call(T address)
-{
+template <typename T>
+void GameBoy::call(T address) {
 	push(PC + 3);
 	PC = address;
 }
 
-template<typename T>
+template <typename T>
 void GameBoy::cp(T value) //compare
 {
-	if(AF.hi < value)
-	{
+	if (AF.hi < value) {
 		setFlag(CARRY_FLAG);
 		resetFlag(ZERO_FLAG);
 	}
-	else if(AF.hi == value)
-	{
+	else if (AF.hi == value) {
 		setFlag(ZERO_FLAG);
 		resetFlag(CARRY_FLAG);
 	}
@@ -253,21 +226,18 @@ void GameBoy::cp(T value) //compare
 	setFlag(SUBTRACT_FLAG);
 
 	//halfcarry test https://www.reddit.com/r/EmuDev/comments/4clh23/trouble_with_halfcarrycarry_flag/
-	if(0 > (((AF.hi) & 0xf) - (value & 0xf)))
+	if (0 > (((AF.hi) & 0xf) - (value & 0xf)))
 		setFlag(HALFCARRY_FLAG);
 	else
 		resetFlag(HALFCARRY_FLAG);
-
 }
 
-template<typename T>
-void GameBoy::dec(T &reg)
-{
+template <typename T>
+void GameBoy::dec(T& reg) {
 	reg -= 1;
 
-	if(sizeof(reg) == sizeof(Byte))
-	{
-		if(reg == 0)
+	if (sizeof(reg) == sizeof(Byte)) {
+		if (reg == 0)
 			setFlag(ZERO_FLAG);
 		else
 			resetFlag(ZERO_FLAG);
@@ -275,37 +245,33 @@ void GameBoy::dec(T &reg)
 		setFlag(SUBTRACT_FLAG);
 
 		//halfcarry test https://www.reddit.com/r/EmuDev/comments/4clh23/trouble_with_halfcarrycarry_flag/
-		if(0 > (((reg + 1) & 0xf) - (reg & 0xf)))
+		if (0 > (((reg + 1) & 0xf) - (reg & 0xf)))
 			setFlag(HALFCARRY_FLAG);
 		else
 			resetFlag(HALFCARRY_FLAG);
-
 	}
-
 }
 
-template<typename T>
-bool GameBoy::jrZ(T offset)
-{
+template <typename T>
+bool GameBoy::jrZ(T offset) {
 	bool jumped = false;
-	if(getFlag(ZERO_FLAG)) //if not set
+	if (getFlag(ZERO_FLAG)) //if not set
 	{
-		PC += (int8_t) offset + 2; //PC moves 2 from the original instruction
+		PC += (int8_t)offset + 2; //PC moves 2 from the original instruction
 		jumped = true;
 	}
 
 	return jumped;
 }
 
-void GameBoy::swap(Byte &value)
-{
+void GameBoy::swap(Byte& value) {
 	// Extract the lower and upper nibbles of the register
 	Byte lowerNibble = value & 0x0F;
 	Byte upperNibble = (value >> 4) & 0x0F;
 
 	// Swap the lower and upper nibbles
 	value = (lowerNibble << 4) | upperNibble;
-	if(value == 0)
+	if (value == 0)
 		setFlag(ZERO_FLAG);
 	else
 		resetFlag(ZERO_FLAG);
@@ -315,21 +281,15 @@ void GameBoy::swap(Byte &value)
 	resetFlag(CARRY_FLAG);
 }
 
-void GameBoy::halt()
-{
+void GameBoy::halt() {}
 
-}
-
-template<typename T>
-void GameBoy::sub(T value)
-{
-	if(AF.hi < value)
-	{
+template <typename T>
+void GameBoy::sub(T value) {
+	if (AF.hi < value) {
 		setFlag(CARRY_FLAG);
 		resetFlag(ZERO_FLAG);
 	}
-	else if(AF.hi == value)
-	{
+	else if (AF.hi == value) {
 		setFlag(ZERO_FLAG);
 		resetFlag(CARRY_FLAG);
 	}
@@ -338,61 +298,51 @@ void GameBoy::sub(T value)
 
 	setFlag(SUBTRACT_FLAG);
 	//halfcarry test https://www.reddit.com/r/EmuDev/comments/4clh23/trouble_with_halfcarrycarry_flag/
-	if(0 > (((AF.hi) & 0xf) - (value & 0xf)))
+	if (0 > (((AF.hi) & 0xf) - (value & 0xf)))
 		setFlag(HALFCARRY_FLAG);
 	else
 		resetFlag(HALFCARRY_FLAG);
-
 }
 
-template<typename T>
-void GameBoy::jr(T offset)
-{
-	PC += (int8_t) offset + 2; //PC moves 2 from original instruction
+template <typename T>
+void GameBoy::jr(T offset) {
+	PC += (int8_t)offset + 2; //PC moves 2 from original instruction
 }
 
-template<typename T>
-void GameBoy::rl(T &reg)
-{
-	//printf("0x%.2x\n", REG);
-	//printf("%d\n", GET_FLAG(CARRY_FLAG));
+template <typename T>
+void GameBoy::rl(T& reg) {
 	bool carry;
 
-	//printf("\n0x%x\n", REG);
-	//printf("0x%x\n\n", REG & ((T)1 << 7));
-
-	if(reg & (1 << 7))
+	if (reg & (1 << 7))
 		carry = true;
 	else
 		carry = false;
 
 	reg <<= 1;
 
-	if(getFlag(CARRY_FLAG))
+	if (getFlag(CARRY_FLAG))
 		reg += 1;
 
-	if(carry)
+	if (carry)
 		setFlag(CARRY_FLAG);
 
 	else
 		resetFlag(CARRY_FLAG);
 
-	if(reg == 0)
+	if (reg == 0)
 		setFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
 	resetFlag(HALFCARRY_FLAG);
 }
 
-template<typename T>
-void GameBoy::pop(T &reg)
-{
+template <typename T>
+void GameBoy::pop(T& reg) {
 	reg = getWordSP();
 }
 
-template<typename T>
-void GameBoy::push(T reg)
-{
+template <typename T>
+void GameBoy::push(T reg) {
 	//little endian
 	RegisterPair temp;
 	temp.lo = reg & 0xFF;
@@ -403,57 +353,47 @@ void GameBoy::push(T reg)
 	addressSpace[SP] = temp.lo;
 }
 
-template<typename T>
-void GameBoy::jp(T address)
-{
+template <typename T>
+void GameBoy::jp(T address) {
 	PC = address;
 }
 
-template<typename T>
-void GameBoy::rst(T address)
-{
+template <typename T>
+void GameBoy::rst(T address) {
 	push(PC);
 	PC = address;
 }
 
-void GameBoy::cpl()
-{
+void GameBoy::cpl() {
 	AF.hi = ~AF.hi;
 	setFlag(SUBTRACT_FLAG);
 	setFlag(HALFCARRY_FLAG);
 }
 
-void GameBoy::ccf()
-{
+void GameBoy::ccf() {
 	resetFlag(SUBTRACT_FLAG);
 	resetFlag(HALFCARRY_FLAG);
-	if(getFlag(CARRY_FLAG))
+	if (getFlag(CARRY_FLAG))
 		resetFlag(CARRY_FLAG);
 	else
 		setFlag(CARRY_FLAG);
 }
 
-void GameBoy::stop()
-{
-}
+void GameBoy::stop() {}
 
-void GameBoy::opcodeHandler()
-{
+void GameBoy::opcodeHandler() {
 	bool jumped;
 
-	if(addressSpace[PC] != 0xCB)
-	{
+	if (addressSpace[PC] != 0xCB) {
 		//printf("PC:0x%.2x, Opcode:0x%.2x\n", PC, addressSpace[PC]);
-		if(PC == 0x100)
-		{
+		if (PC == 0x100) {
 			printf("LY:0x%.2x\n", (*LY));
 			// printf("PC:0x%.2x, Opcode:0x%.2x\n", PC, addressSpace[PC]);
 			// printf("IME:%b IF:0x%.2x IE:0x%.2x\n", IME, (*IF), (*IE));
 		}
 		//printf("IME:%b IF:0x%.2x IE:0x%.2x\n", IME, (*IF), (*IE));
 
-		switch(addressSpace[PC])
-		{
+		switch (addressSpace[PC]) {
 		case 0x00:
 			//NOP
 			PC += 1;
@@ -630,12 +570,10 @@ void GameBoy::opcodeHandler()
 
 		case 0x20:
 			jumped = jrNZ(getBytePC());
-			if(jumped)
-			{
+			if (jumped) {
 				addCycles(12);
 			}
-			else
-			{
+			else {
 				PC += 2;
 				addCycles(8);
 			}
@@ -674,12 +612,10 @@ void GameBoy::opcodeHandler()
 
 		case 0x28:
 			jumped = jrZ(getBytePC());
-			if(jumped)
-			{
+			if (jumped) {
 				addCycles(12);
 			}
-			else
-			{
+			else {
 				PC += 2;
 				addCycles(8);
 			}
@@ -1457,13 +1393,11 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xC0: //RET NZ
-			if(!getFlag(ZERO_FLAG))
-			{
+			if (!getFlag(ZERO_FLAG)) {
 				ret();
 				addCycles(20);
 			}
-			else
-			{
+			else {
 				addCycles(8);
 				PC += 1;
 			}
@@ -1476,13 +1410,11 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xC2:
-			if(!getFlag(ZERO_FLAG))
-			{
+			if (!getFlag(ZERO_FLAG)) {
 				jp(getWordPC());
 				addCycles(16);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
@@ -1494,13 +1426,11 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xC4:
-			if(!getFlag(ZERO_FLAG))
-			{
+			if (!getFlag(ZERO_FLAG)) {
 				call(getWordPC());
 				addCycles(24);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
@@ -1513,17 +1443,15 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xC8:
-			if(getFlag(ZERO_FLAG))
-			{
+			if (getFlag(ZERO_FLAG)) {
 				ret();
 				addCycles(20);
 			}
-			else
-			{
+			else {
 				addCycles(8);
 				PC += 1;
 			}
-				break;
+			break;
 
 		case 0xC9:
 			ret();
@@ -1531,26 +1459,22 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xCA:
-			if(getFlag(ZERO_FLAG))
-			{
+			if (getFlag(ZERO_FLAG)) {
 				jp(getWordPC());
 				addCycles(16);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
 			break;
 
 		case 0xCC:
-			if(getFlag(ZERO_FLAG))
-			{
+			if (getFlag(ZERO_FLAG)) {
 				call(getWordPC());
 				addCycles(24);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
@@ -1567,13 +1491,11 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xD0: //RET NC
-			if(!getFlag(CARRY_FLAG))
-			{
+			if (!getFlag(CARRY_FLAG)) {
 				ret();
 				addCycles(20);
 			}
-			else
-			{
+			else {
 				addCycles(8);
 				PC += 3;
 			}
@@ -1586,26 +1508,22 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xD2:
-			if(!getFlag(CARRY_FLAG))
-			{
+			if (!getFlag(CARRY_FLAG)) {
 				jp(getWordPC());
 				addCycles(24);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
 			break;
 
 		case 0xD4:
-			if(!getFlag(CARRY_FLAG))
-			{
+			if (!getFlag(CARRY_FLAG)) {
 				call(getWordPC());
 				addCycles(24);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
@@ -1618,13 +1536,11 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xD8:
-			if(getFlag(CARRY_FLAG))
-			{
+			if (getFlag(CARRY_FLAG)) {
 				ret();
 				addCycles(20);
 			}
-			else
-			{
+			else {
 				addCycles(8);
 				PC += 1;
 			}
@@ -1638,26 +1554,22 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0xDA:
-			if(getFlag(CARRY_FLAG))
-			{
+			if (getFlag(CARRY_FLAG)) {
 				jp(getWordPC());
 				addCycles(16);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
 			break;
 
 		case 0xDC:
-			if(getFlag(CARRY_FLAG))
-			{
+			if (getFlag(CARRY_FLAG)) {
 				call(getWordPC());
 				addCycles(24);
 			}
-			else
-			{
+			else {
 				addCycles(12);
 				PC += 3;
 			}
@@ -1698,11 +1610,11 @@ void GameBoy::opcodeHandler()
 			addCycles(8);
 			break;
 
-//		case 0xE8:
-//			SP += (int8_t)getByte();
-//			PC += 2;
-//			addCycles(16);
-//			break;
+		//		case 0xE8:
+		//			SP += (int8_t)getByte();
+		//			PC += 2;
+		//			addCycles(16);
+		//			break;
 
 		case 0xE9:
 			jp(HL.reg);
@@ -1773,7 +1685,6 @@ void GameBoy::opcodeHandler()
 			printf("Unimplemented opcode found: PC:0x%.2x, Opcode:0x%.2x\n", PC, addressSpace[PC]);
 			exit(1);
 		}
-
 	}
 	else //extension
 	{
@@ -1782,8 +1693,7 @@ void GameBoy::opcodeHandler()
 		addCycles(4);
 
 		//extension handler
-		switch(addressSpace[PC])
-		{
+		switch (addressSpace[PC]) {
 		case 0x11:
 			rl(BC.lo);
 			PC += 1;
@@ -1839,7 +1749,7 @@ void GameBoy::opcodeHandler()
 			break;
 
 		case 0x7C:
-			bit((Byte) 7, HL.hi);
+			bit((Byte)7, HL.hi);
 			PC += 1;
 			addCycles(8);
 			break;

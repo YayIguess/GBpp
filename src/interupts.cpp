@@ -1,35 +1,31 @@
 #include "defines.hpp"
 #include "gameboy.hpp"
 
-bool GameBoy::testInterruptEnabled(Byte interrupt)
-{
-	return (*IE) & (Byte) (1 << interrupt);
+bool GameBoy::testInterruptEnabled(Byte interrupt) {
+	return (*IE) & (Byte)(1 << interrupt);
 }
 
-void GameBoy::resetInterrupt(Byte interrupt)
-{
+void GameBoy::resetInterrupt(Byte interrupt) {
 	*IF &= ~(1 << interrupt);
 }
 
-void GameBoy::interruptHandler()
-{
-	if(!IME)
+void GameBoy::interruptHandler() {
+	if (!IME)
 		return;
 
-	if(*IF & (Byte) (1 << VBLANK_INTERRUPT) && testInterruptEnabled(VBLANK_INTERRUPT))
+	if (*IF & (Byte)(1 << VBLANK_INTERRUPT) && testInterruptEnabled(VBLANK_INTERRUPT))
 		VBlankHandle();
-	if(*IF & (Byte) (1 << LCD_STAT_INTERRUPT) && testInterruptEnabled(LCD_STAT_INTERRUPT))
+	if (*IF & (Byte)(1 << LCD_STAT_INTERRUPT) && testInterruptEnabled(LCD_STAT_INTERRUPT))
 		LCDStatHandle();
-	if(*IF & (Byte) (1 << TIMER_INTERRUPT) && testInterruptEnabled(TIMER_INTERRUPT))
+	if (*IF & (Byte)(1 << TIMER_INTERRUPT) && testInterruptEnabled(TIMER_INTERRUPT))
 		timerHandle();
-	if(*IF & (Byte) (1 << SERIAL_INTERRUPT)	&& testInterruptEnabled(SERIAL_INTERRUPT))
+	if (*IF & (Byte)(1 << SERIAL_INTERRUPT) && testInterruptEnabled(SERIAL_INTERRUPT))
 		serialHandle();
-	if(*IF & (Byte) (1 << JOYPAD_INTERRUPT)	&& testInterruptEnabled(JOYPAD_INTERRUPT))
+	if (*IF & (Byte)(1 << JOYPAD_INTERRUPT) && testInterruptEnabled(JOYPAD_INTERRUPT))
 		joypadHandle();
 }
 
-void GameBoy::VBlankHandle()
-{
+void GameBoy::VBlankHandle() {
 	printf("VBlank interrupt");
 	IME = 0;
 	push(PC);
@@ -37,8 +33,7 @@ void GameBoy::VBlankHandle()
 	resetInterrupt(VBLANK_INTERRUPT);
 }
 
-void GameBoy::LCDStatHandle()
-{
+void GameBoy::LCDStatHandle() {
 	printf("LCD stat interrupt");
 	IME = 0;
 	push(PC);
@@ -47,8 +42,7 @@ void GameBoy::LCDStatHandle()
 	resetInterrupt(LCD_STAT_INTERRUPT);
 }
 
-void GameBoy::timerHandle()
-{
+void GameBoy::timerHandle() {
 	printf("timer interrupt");
 	IME = 0;
 	push(PC);
@@ -57,8 +51,7 @@ void GameBoy::timerHandle()
 	resetInterrupt(TIMER_INTERRUPT);
 }
 
-void GameBoy::serialHandle()
-{
+void GameBoy::serialHandle() {
 	printf("serial interrupt");
 	IME = 0;
 	push(PC);
@@ -67,8 +60,7 @@ void GameBoy::serialHandle()
 	resetInterrupt(SERIAL_INTERRUPT);
 }
 
-void GameBoy::joypadHandle()
-{
+void GameBoy::joypadHandle() {
 	printf("joypad interrupt");
 	IME = 0;
 	push(PC);

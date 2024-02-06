@@ -1,60 +1,50 @@
 #include <iostream>
 #include "gameboy.hpp"
 
-bool AddressSpace::getBootromState()
-{
+bool AddressSpace::getBootromState() {
 	return bootromLoaded;
 }
 
-void AddressSpace::unmapBootrom()
-{
+void AddressSpace::unmapBootrom() {
 	bootromLoaded = false;
 }
 
-void AddressSpace::mapBootrom()
-{
+void AddressSpace::mapBootrom() {
 	bootromLoaded = true;
 }
 
-void AddressSpace::loadBootrom(std::string filename)
-{
+void AddressSpace::loadBootrom(std::string filename) {
 	std::ifstream file;
 	int size = std::filesystem::file_size(filename);
-	if(size != 256)
-	{
+	if (size != 256) {
 		std::cerr << "Bootrom was an unexpected size!\nQuitting!\n" << std::endl;
 		exit(1);
 	}
 	file.open(filename, std::ios::binary);
-	file.read(reinterpret_cast<char *>(bootrom), BOOTROM_SIZE);
+	file.read(reinterpret_cast<char*>(bootrom), BOOTROM_SIZE);
 }
 
-void AddressSpace::loadGame(std::string filename)
-{
+void AddressSpace::loadGame(std::string filename) {
 	game.open(filename, std::ios::binary);
 
-	if(!game.is_open())
-	{
+	if (!game.is_open()) {
 		std::cerr << "Game was not found!\nQuitting!\n" << std::endl;
 		exit(1);
 	}
-	game.read(reinterpret_cast<char *>(memoryLayout.romBank1), ROM_BANK_SIZE*2);
+	game.read(reinterpret_cast<char*>(memoryLayout.romBank1), ROM_BANK_SIZE * 2);
 }
 
-void GameBoy::addCycles(uint8_t ticks)
-{
-	cycles = (cycles+ticks) % T_CLOCK_FREQ;
+void GameBoy::addCycles(uint8_t ticks) {
+	cycles = (cycles + ticks) % T_CLOCK_FREQ;
 	lastOpTicks = ticks;
 }
 
-void GameBoy::start(std::string bootrom, std::string game)
-{
+void GameBoy::start(std::string bootrom, std::string game) {
 	addressSpace.loadBootrom(bootrom);
 	addressSpace.loadGame(game);
 
 	bool quit = false;
-	while(!quit)
-	{
+	while (!quit) {
 		// Event loop: Check and handle SDL events
 		// if(SDL_PollEvent(&event))
 		// {
@@ -68,16 +58,13 @@ void GameBoy::start(std::string bootrom, std::string game)
 		interruptHandler();
 		//timing();
 		ppuUpdate();
-		if(PC > 0xFF && addressSpace.getBootromState())
-		{
+		if (PC > 0xFF && addressSpace.getBootromState()) {
 			addressSpace.unmapBootrom();
 		}
 		int cyclesSince = cyclesSinceLastRefresh();
-		if(cyclesSince > FRAME_DURATION)
-		{
+		if (cyclesSince > FRAME_DURATION) {
 			lastRefresh = cycles;
 			SDL2present();
 		}
 	}
 }
-

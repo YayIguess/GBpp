@@ -11,66 +11,59 @@
 #include "defines.hpp"
 
 //two bits per colour
-enum Colour
-{
+enum Colour {
 	black = 0b11,
 	darkGray = 0b10,
 	lightGray = 0b01,
 	white = 0b00
 };
 
-enum PPUMode
-{
+enum PPUMode {
 	mode0, // Horizontal Blank (Mode 0): No access to video RAM, occurs during horizontal blanking period.
 	mode1, // Vertical Blank (Mode 1): No access to video RAM, occurs during vertical blanking period.
 	mode2, // OAM Search (Mode 2): Access to OAM (Object Attribute Memory) only, sprite evaluation.
-	mode3  // Pixel Transfer (Mode 3): Access to both OAM and video RAM, actual pixel transfer to the screen.
+	mode3 // Pixel Transfer (Mode 3): Access to both OAM and video RAM, actual pixel transfer to the screen.
 };
 
-union RegisterPair
-{
+union RegisterPair {
 	Word reg; //register.reg == (hi << 8) + lo. (hi is more significant than lo)
 
-	struct
-	{
+	struct {
 		Byte lo;
 		Byte hi;
 	};
 };
 
-class AddressSpace
-{
-  private:
+class AddressSpace {
+private:
 	bool bootromLoaded = true;
 	Byte bootrom[BOOTROM_SIZE];
 	std::ifstream game;
 
- public:
-	AddressSpace()
-	{
+public:
+	AddressSpace() {
 		// Initialize the memory to zero
 		memoryLayout = {};
 		std::memset(memoryLayout.memory, 0, sizeof(memoryLayout.memory));
 	}
 
 	// Nested union for the memory layout
-	union MemoryLayout
-	{
+	union MemoryLayout {
 		Byte memory[0x10000];
-		struct
-		{
-			Byte romBank1[ROM_BANK_SIZE];          // Mapped to 0x0000
-			Byte romBankSwitch[ROM_BANK_SIZE];     // Mapped to 0x4000
-			Byte vram[0x2000];              // Mapped to 0x8000
-			Byte externalRam[0x2000];       // Mapped to 0xA000
-			Byte memoryBank1[0x1000];       // Mapped to 0xC000
-			Byte memoryBank2[0x1000];       // Mapped to 0xD000
-			Byte echoRam[0x1E00];           // Mapped to 0xE000 (Echo RAM, mirrors 0xC000 to 0xDFFF)
+
+		struct {
+			Byte romBank1[ROM_BANK_SIZE]; // Mapped to 0x0000
+			Byte romBankSwitch[ROM_BANK_SIZE]; // Mapped to 0x4000
+			Byte vram[0x2000]; // Mapped to 0x8000
+			Byte externalRam[0x2000]; // Mapped to 0xA000
+			Byte memoryBank1[0x1000]; // Mapped to 0xC000
+			Byte memoryBank2[0x1000]; // Mapped to 0xD000
+			Byte echoRam[0x1E00]; // Mapped to 0xE000 (Echo RAM, mirrors 0xC000 to 0xDFFF)
 			Byte spriteAttributeTable[0xA0]; // Mapped to 0xFE00
-			Byte notUsable[0x60];           // Mapped to 0xFEA0
-			Byte io[0x80];                  // Mapped to 0xFF00, 0xFF0F is interrupt flag
-			Byte specialRam[0x7F];          // Mapped to 0xFF80
-			Byte interuptEnableReg;         // Mapped to 0xFFFF
+			Byte notUsable[0x60]; // Mapped to 0xFEA0
+			Byte io[0x80]; // Mapped to 0xFF00, 0xFF0F is interrupt flag
+			Byte specialRam[0x7F]; // Mapped to 0xFF80
+			Byte interuptEnableReg; // Mapped to 0xFFFF
 		};
 	} memoryLayout;
 
@@ -81,20 +74,19 @@ class AddressSpace
 	void loadGame(std::string filename);
 
 	//overload [] for echo ram and bootrom support
-	Byte operator[](uint32_t address) const
-	{
-		if(address >= 0xE000 && address < 0xFE00)
+	Byte operator[](uint32_t address) const {
+		if (address >= 0xE000 && address < 0xFE00)
 			return memoryLayout.echoRam[address - 0xE000];
-		if(address < 0x0100 && bootromLoaded)
+		if (address < 0x0100 && bootromLoaded)
 			return bootrom[address];
 		else
 			return memoryLayout.memory[address];
 	}
-	Byte& operator[](uint32_t address)
-	{
-		if(address >= 0xE000 && address < 0xFE00)
+
+	Byte& operator[](uint32_t address) {
+		if (address >= 0xE000 && address < 0xFE00)
 			return memoryLayout.echoRam[address - 0xE000];
-		if(address < 0x0100 && bootromLoaded)
+		if (address < 0x0100 && bootromLoaded)
 			return bootrom[address];
 		else
 			return memoryLayout.memory[address];
@@ -102,7 +94,7 @@ class AddressSpace
 };
 
 class GameBoy {
-  private:
+private:
 	uint32_t cycles = 0;
 	uint32_t lastOpTicks = 0;
 	uint32_t lastRefresh = 0;
@@ -181,10 +173,10 @@ class GameBoy {
 	PPUMode currentMode;
 
 	//3 colour channels
-	uint32_t* framebuffer = new uint32_t[RESOLUTION_X*RESOLUTION_Y*SCREEN_BPP];
-	SDL_Window *screen;
-	SDL_Renderer *renderer;
-	SDL_Texture *texture;
+	uint32_t* framebuffer = new uint32_t[RESOLUTION_X * RESOLUTION_Y * SCREEN_BPP];
+	SDL_Window* screen;
+	SDL_Renderer* renderer;
+	SDL_Texture* texture;
 	SDL_Event event;
 
 	void opcodeHandler();
@@ -220,56 +212,56 @@ class GameBoy {
 	void addCycles(Byte ticks);
 
 	//OPCODE FUNCTIONS
-	template<typename T>
+	template <typename T>
 	void ld(T& dest, T src);
-	template<typename T>
-	void orBitwise(T &dest, T src);
-	template<typename T>
-	void andBitwise(T &dest, T src);
-	template<typename T>
+	template <typename T>
+	void orBitwise(T& dest, T src);
+	template <typename T>
+	void andBitwise(T& dest, T src);
+	template <typename T>
 	void xorBitwise(T& dest, T src);
-	template<typename T>
+	template <typename T>
 	void bit(T testBit, T reg);
-	template<typename T>
+	template <typename T>
 	void jp(T address);
-	template<typename T>
+	template <typename T>
 	bool jrNZ(T offset);
-	template<typename T>
+	template <typename T>
 	void inc(T& reg);
-	template<typename T>
+	template <typename T>
 	void call(T address);
 	void halt();
 	void stop();
-	template<typename T>
+	template <typename T>
 	void ldW(T dest, T src);
-	template<typename T>
+	template <typename T>
 	void cp(T value);
-	template<typename T>
+	template <typename T>
 	void dec(T& reg);
-	template<typename T>
+	template <typename T>
 	bool jrZ(T offset);
-	template<typename T>
+	template <typename T>
 	void sub(T value);
-	template<typename T>
+	template <typename T>
 	void jr(T OFFSET);
-	template<typename T>
+	template <typename T>
 	void push(T reg);
-	template<typename T>
+	template <typename T>
 	void rl(T& reg);
-	template<typename T>
+	template <typename T>
 	void pop(T& reg);
-	template<typename T>
+	template <typename T>
 	void rla(T& reg);
-	template<typename T>
+	template <typename T>
 	void rst(T address);
 	void ret();
-	template<typename T>
+	template <typename T>
 	void add(T& reg, T value);
 	void cpl();
 	void ccf();
-	void swap(Byte &value);
+	void swap(Byte& value);
 
-  public:
+public:
 	void start(std::string bootrom, std::string game);
 	void SDL2setup();
 	void SDL2destroy();

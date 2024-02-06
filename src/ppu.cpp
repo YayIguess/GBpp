@@ -4,7 +4,7 @@
 #include <cstdint>
 
 void GameBoy::ppuUpdate() {
-	//test HBlank
+	//test for HBlank
 	checkPPUMode();
 
 	if (cyclesToStayInHblank != -1) {
@@ -53,7 +53,8 @@ void GameBoy::ppuUpdate() {
 		// bug on DMG models triggers a STAT interrupt anytime the STAT register is written
 		// Road Rage and Zerd no Denetsu rely on this
 		(*STAT) |= (1 << 2);
-	} else {
+	}
+	else {
 		(*STAT) &= ~(1 << 2);
 	}
 
@@ -96,7 +97,8 @@ void GameBoy::checkPPUMode() {
 			setPPUMode(PPUMode::mode3);
 		else
 			setPPUMode(PPUMode::mode0);
-	} else {
+	}
+	else {
 		// VBlank Period
 		setPPUMode(PPUMode::mode1);
 	}

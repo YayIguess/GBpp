@@ -9,7 +9,7 @@
 // 6    n     -   -    Add/Sub-Flag (BCD)
 // 5    h     -   -    Half Carry Flag (BCD)
 // 4    cy    C   NC   Carry Flag
-// 3-0  -     -   -    Not used (always zero)
+// 3-0  -     -   -    Not used
 #define CARRY_FLAG 4 //'C'
 #define HALFCARRY_FLAG 5 //'H'
 #define SUBTRACT_FLAG 6 //'N'
@@ -21,7 +21,7 @@
 #define SERIAL_INTERRUPT 3
 #define JOYPAD_INTERRUPT 4
 
-#define T_CLOCK_FREQ 4194304
+#define T_CLOCK_FREQ 4194304 //2^22
 
 #define DIVIDER_REGISTER_FREQ 16384
 
@@ -39,13 +39,13 @@
 #define MODE2_DURATION 80
 #define MODE3_MIN_DURATION 172
 #define MODE0_3_DURATION 376 //mode3 is 172 to 289, mode0 87 to 204
-#define MODE1_DURATION 4560
 
 #define H_SYNC 9198
 #define V_SYNC 59.73
-#define HBlank_DURATION 204 //GPU_MODE 0
-#define SCANLINE_OAM_FREQ 80 //GPU_MODE 2
-#define SCANLINE_VRAM_FREQ 80 //GPU_MODE 3
+#define HBLANK_DURATION 204 //PPU_MODE 0
+#define VBLANK_DURATION 4560
+#define SCANLINE_OAM_FREQ 80 //PPU_MODE 2
+#define SCANLINE_VRAM_FREQ 80 //PPU_MODE 3
 
 
 #endif
