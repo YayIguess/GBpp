@@ -20,13 +20,11 @@ void GameBoy::ppuUpdate() {
 	Byte mode = (*STAT) & 0x03;
 	switch (mode) {
 	case 0:
-		if (cyclesSinceLastScanline() > MODE2_DURATION + MODE3_BASE_DURATION) {
+		if (cyclesSinceLastScanline() > MODE2_DURATION + MODE3_MIN_DURATION) {
 			drawLine();
 			cyclesToStayInHblank = SCANLINE_DURATION - cyclesSinceLastScanline();
 			lastScanline = cycles;
-			(*LY)++;
-			if ((*LY) > 153)
-				(*LY) = 0;
+			incLY();
 		}
 		currentMode = PPUMode::mode0;
 		break;
@@ -35,14 +33,11 @@ void GameBoy::ppuUpdate() {
 	case 1:
 		if (currentMode != PPUMode::mode1) {
 			setPPUMode(PPUMode::mode1);
-			//drawLine();
 			*IF |= 0x1;
 		}
 		if (cyclesSinceLastScanline() > SCANLINE_DURATION) {
 			lastScanline = cycles;
-			(*LY)++;
-			if ((*LY) > 153)
-				(*LY) = 0;
+			incLY();
 		}
 		currentMode = PPUMode::mode1;
 		break;
@@ -55,8 +50,8 @@ void GameBoy::ppuUpdate() {
 	}
 	if ((*LY) == (*LYC) || (*STAT) & (1 << 6)) {
 		// Request STAT interrupt if LY matches LYC
-		//bug on DMG models triggers a STAT interrupt anytime the STAT register is written
-		//Road Rage and Zerd no Denetsu rely on this
+		// bug on DMG models triggers a STAT interrupt anytime the STAT register is written
+		// Road Rage and Zerd no Denetsu rely on this
 		(*STAT) |= (1 << 2);
 	} else {
 		(*STAT) &= ~(1 << 2);
@@ -74,31 +69,37 @@ void GameBoy::ppuUpdate() {
 	}
 }
 
+void GameBoy::incLY() {
+	(*LY)++;
+	if ((*LY) > 153)
+		(*LY) = 0;
+}
+
 uint32_t GameBoy::cyclesSinceLastScanline() {
-	uint32_t difference = cycles - lastScanline;
+	const uint32_t difference = cycles - lastScanline;
 	return difference;
 }
 
 uint32_t GameBoy::cyclesSinceLastRefresh() {
-	uint32_t difference = cycles - lastRefresh;
+	const uint32_t difference = cycles - lastRefresh;
 	return difference;
 }
 
 void GameBoy::checkPPUMode() {
-	int oamFetchTime = 0;
+	uint32_t oamFetchTime = 0;
 	if ((*LY) < 144) {
-		uint32_t currentDuration = cyclesSinceLastScanline();
+		const uint32_t currentDuration = cyclesSinceLastScanline();
 		// Active Display Period (HBlank, OAM Search, and Pixel Transfer)
 		if (currentDuration < MODE2_DURATION)
 			setPPUMode(PPUMode::mode2);
-		else if (currentDuration < MODE2_DURATION + MODE3_BASE_DURATION + oamFetchTime)
+		else if (currentDuration < MODE2_DURATION + MODE3_MIN_DURATION + oamFetchTime)
 			setPPUMode(PPUMode::mode3);
 		else
 			setPPUMode(PPUMode::mode0);
-	}
-	// VBlank Period
-	else
+	} else {
+		// VBlank Period
 		setPPUMode(PPUMode::mode1);
+	}
 }
 
 void GameBoy::setPPUMode(PPUMode mode) {

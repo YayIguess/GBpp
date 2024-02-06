@@ -188,6 +188,7 @@ class GameBoy {
 	SDL_Event event;
 
 	void opcodeHandler();
+	void incLY();
 	void ppuUpdate();
 	void drawLine();
 	void SDL2present();
