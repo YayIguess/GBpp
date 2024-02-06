@@ -44,15 +44,15 @@ void GameBoy::start(std::string bootrom, std::string game) {
 	addressSpace.loadGame(game);
 
 	bool quit = false;
+	uint32_t cyclesSince = 0;
+
 	while (!quit) {
 		// Event loop: Check and handle SDL events
-		// if(SDL_PollEvent(&event))
-		// {
-		// 	if(event.type == SDL_QUIT)
-		// 	{
-		// 		quit = true; // Set the quit flag when the close button is hit
-		// 	}
-		// }
+		if (SDL_PollEvent(&event)) {
+			if (event.type == SDL_QUIT) {
+				quit = true; // Set the quit flag when the close button is hit
+			}
+		}
 
 		opcodeHandler();
 		interruptHandler();
@@ -61,7 +61,7 @@ void GameBoy::start(std::string bootrom, std::string game) {
 		if (PC > 0xFF && addressSpace.getBootromState()) {
 			addressSpace.unmapBootrom();
 		}
-		int cyclesSince = cyclesSinceLastRefresh();
+		cyclesSince = cyclesSinceLastRefresh();
 		if (cyclesSince > FRAME_DURATION) {
 			lastRefresh = cycles;
 			SDL2present();

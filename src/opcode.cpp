@@ -388,6 +388,7 @@ void GameBoy::opcodeHandler() {
 		//printf("PC:0x%.2x, Opcode:0x%.2x\n", PC, addressSpace[PC]);
 		if (PC == 0x100) {
 			printf("LY:0x%.2x\n", (*LY));
+			exit(1);
 			// printf("PC:0x%.2x, Opcode:0x%.2x\n", PC, addressSpace[PC]);
 			// printf("IME:%b IF:0x%.2x IE:0x%.2x\n", IME, (*IF), (*IE));
 		}
