@@ -21,10 +21,10 @@ enum Colour
 
 enum PPUMode
 {
-	mode0,       // Horizontal Blank (Mode 0): No access to video RAM, occurs during horizontal blanking period.
-	mode1,       // Vertical Blank (Mode 1): No access to video RAM, occurs during vertical blanking period.
-	mode2,    // OAM Search (Mode 2): Access to OAM (Object Attribute Memory) only, sprite evaluation.
-	mode3 // Pixel Transfer (Mode 3): Access to both OAM and video RAM, actual pixel transfer to the screen.
+	mode0, // Horizontal Blank (Mode 0): No access to video RAM, occurs during horizontal blanking period.
+	mode1, // Vertical Blank (Mode 1): No access to video RAM, occurs during vertical blanking period.
+	mode2, // OAM Search (Mode 2): Access to OAM (Object Attribute Memory) only, sprite evaluation.
+	mode3  // Pixel Transfer (Mode 3): Access to both OAM and video RAM, actual pixel transfer to the screen.
 };
 
 union RegisterPair
@@ -168,7 +168,7 @@ class GameBoy {
 	Byte* LCDC = &addressSpace[0xFF40];
 	Byte* STAT = &addressSpace[0xFF41];
 	Byte* SCY = &addressSpace[0xFF42];
-	Byte* SCX = &addressSpace[0xF43];
+	Byte* SCX = &addressSpace[0xFF43];
 	Byte* LY = &addressSpace[0xFF44];
 	Byte* LYC = &addressSpace[0xFF45];
 	Byte* DMA = &addressSpace[0xFF46];
@@ -194,8 +194,8 @@ class GameBoy {
 
 	void checkPPUMode();
 	void setPPUMode(PPUMode mode);
-	int cyclesSinceLastScanline();
-	int cyclesSinceLastRefresh();
+	uint32_t cyclesSinceLastScanline();
+	uint32_t cyclesSinceLastRefresh();
 
 	void interruptHandler();
 	bool testInterruptEnabled(Byte interrupt);

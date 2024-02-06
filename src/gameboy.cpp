@@ -47,11 +47,6 @@ void GameBoy::addCycles(uint8_t ticks)
 	lastOpTicks = ticks;
 }
 
-void test()
-{
-	printf("");
-}
-
 void GameBoy::start(std::string bootrom, std::string game)
 {
 	addressSpace.loadBootrom(bootrom);
@@ -61,27 +56,21 @@ void GameBoy::start(std::string bootrom, std::string game)
 	while(!quit)
 	{
 		// Event loop: Check and handle SDL events
-//		if(SDL_PollEvent(&event))
-//		{
-//			if(event.type == SDL_QUIT)
-//			{
-//				quit = true; // Set the quit flag when the close button is hit
-//			}
-//		}
+		// if(SDL_PollEvent(&event))
+		// {
+		// 	if(event.type == SDL_QUIT)
+		// 	{
+		// 		quit = true; // Set the quit flag when the close button is hit
+		// 	}
+		// }
 
 		opcodeHandler();
 		interruptHandler();
 		//timing();
 		ppuUpdate();
-		if(PC == 0x8c && DE.hi == 0)
-			test();
 		if(PC > 0xFF && addressSpace.getBootromState())
 		{
 			addressSpace.unmapBootrom();
-		}
-		if(PC > 0x2FF)
-		{
-			test();
 		}
 		int cyclesSince = cyclesSinceLastRefresh();
 		if(cyclesSince > FRAME_DURATION)
