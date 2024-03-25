@@ -3,4 +3,4 @@ build/
 .idea
 
 roms/
-bootrom.bin
+dmg_boot.bin
