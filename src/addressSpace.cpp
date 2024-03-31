@@ -1,5 +1,6 @@
 #include "addressSpace.hpp"
 #include <iostream>
+#include <iterator>
 
 bool AddressSpace::getBootromState() const {
 	return bootromLoaded;
@@ -24,11 +25,23 @@ void AddressSpace::loadBootrom(const std::string& filename) {
 }
 
 void AddressSpace::loadGame(const std::string& filename) {
-	game.open(filename, std::ios::binary);
+	std::ifstream rom(filename, std::ios::binary);
+	rom.unsetf(std::ios::skipws);
 
-	if (!game.is_open()) {
+	if (!rom.is_open()) {
 		std::cerr << "Game was not found!\nQuitting!\n" << std::endl;
 		exit(1);
 	}
-	game.read(reinterpret_cast<char*>(memoryLayout.romBank1), ROM_BANK_SIZE * 2);
+
+	rom.seekg(0, std::ios::end);
+	const std::streampos rom_size = rom.tellg();
+	rom.seekg(0, std::ios::beg);
+
+	game.reserve(rom_size);
+	game.insert(game.begin(),
+	            std::istream_iterator<Byte>(rom),
+	            std::istream_iterator<Byte>());
+
+	memcpy(memoryLayout.romBank0, game.data(), ROM_BANK_SIZE);
+	memcpy(memoryLayout.romBankSwitch, game.data() + ROM_BANK_SIZE, ROM_BANK_SIZE);
 }

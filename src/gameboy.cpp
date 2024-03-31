@@ -12,6 +12,7 @@ void GameBoy::addCycles(const uint8_t ticks) {
 void GameBoy::start(std::string bootrom, std::string game) {
 	addressSpace.loadBootrom(bootrom);
 	addressSpace.loadGame(game);
+	addressSpace.determineMBCInfo();
 
 	//init some registers that won't otherwise by set
 	(*JOYP) = 0xCF;
@@ -35,18 +36,19 @@ void GameBoy::start(std::string bootrom, std::string game) {
 			}
 			ppuEnabled = (*LCDC) & 0x80;
 
-			// if (PC == 0x100)
-			// 	display = true;
-			// if (display) {
-			// 	printf("Cycles: %lu, Opcode: 0x%.2x PPU cycles: %lu, PPMode: %d\n", cycles, addressSpace[PC],
-			// 	       cyclesSinceLastScanline(), currentMode);
-			// 	printf("PC:0x%.2x, SP:0x%.2x\n", PC, SP);
-			// 	printf("AF:0x%.4x, BC:0x%.4x\n", AF.reg, BC.reg);
-			// 	printf("DE:0x%.4x, HL:0x%.4x\n", DE.reg, HL.reg);
-			// 	printf("IME:%d IF:0x%.2x IE:0x%.2x\n", IME, (*IF), (*IE));
-			// 	printf("LCDC:%.2x STAT:0x%.2x LY:%d LYC:%d\n", (*LCDC), (*STAT), (*LY), (*LYC));
-			// 	printf("\n");
-			// }
+			if (PC >= 0xe0)
+				display = true;
+			if (display) {
+				printf("Cycles: %lu, Opcode: 0x%.2x PPU cycles: %lu, PPMode: %d\n", cycles, addressSpace[PC],
+				       cyclesSinceLastScanline(), currentMode);
+				printf("PC:0x%.2x, SP:0x%.2x\n", PC, SP);
+				printf("AF:0x%.4x, BC:0x%.4x\n", AF.reg, BC.reg);
+				printf("DE:0x%.4x, HL:0x%.4x\n", DE.reg, HL.reg);
+				printf("IME:%d IF:0x%.2x IE:0x%.2x\n", IME, (*IF), (*IE));
+				printf("LCDC:%.2x STAT:0x%.2x LY:%d LYC:%d\n", (*LCDC), (*STAT), (*LY), (*LYC));
+				printf("Cart type: 0x%.2x\n", addressSpace.game[0x147]);
+				printf("\n");
+			}
 
 			opcodeResolver();
 			interruptHandler();

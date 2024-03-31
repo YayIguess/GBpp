@@ -114,6 +114,8 @@ class GameBoy {
 	uint32_t frameTime = 0;
 	const int frameDelay = 1000 / V_SYNC;
 
+	bool testMBCWrite(const Byte& address);
+
 	void opcodeResolver();
 	void incLY();
 	void ppuUpdate();

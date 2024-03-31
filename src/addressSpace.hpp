@@ -5,14 +5,17 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <vector>
+
 #include "defines.hpp"
 
 class AddressSpace {
 	bool bootromLoaded = true;
 	Byte bootrom[BOOTROM_SIZE] = {0};
-	std::ifstream game;
 
 public:
+	std::vector<Byte> game;
+
 	AddressSpace() {
 		// Initialize the memory to zero
 		memoryLayout = {};
@@ -24,7 +27,7 @@ public:
 		Byte memory[0x10000];
 
 		struct {
-			Byte romBank1[ROM_BANK_SIZE]; // Mapped to 0x0000
+			Byte romBank0[ROM_BANK_SIZE]; // Mapped to 0x0000
 			Byte romBankSwitch[ROM_BANK_SIZE]; // Mapped to 0x4000
 			Byte vram[0x2000]; // Mapped to 0x8000
 			Byte externalRam[0x2000]; // Mapped to 0xA000
@@ -47,11 +50,16 @@ public:
 
 	void determineMBCInfo();
 	MBCType MBC = {};
-	uint32_t RomSize = 0;
-	uint32_t RomPages = 0;
-	uint32_t ExternalRamSize = 0;
-	uint32_t ExternalRamPages = 0;
-
+	uint32_t romSize = 0;
+	uint32_t romBanks = 0;
+	uint32_t externalRamSize = 0;
+	uint32_t externalRamBanks = 0;
+	Byte romBankRegister = 0x01;
+	Byte ramBankRegister = 0x00;
+	Byte romRamSelect = 0x00;
+	//MBC3
+	Byte latchClockData = 0x00;
+	Byte ramBankRTCRegister = 0x00;
 
 	//overload [] for echo ram and bootrom support
 	Byte operator[](const uint32_t address) const {
