@@ -46,19 +46,22 @@ void GameBoy::ret() {
 
 template <typename T>
 void GameBoy::ld(T& dest, T src) {
-	if constexpr (std::is_same_v<T, Byte*>) {
-		if (&dest == DIV)
+	if constexpr (std::is_same_v<T, Byte>) {
+		if (&dest == DIV) {
 			*DIV = 0x00;
-		lastDivUpdate = cycles;
+			lastDivUpdate = cycles;
+		}
+		else {
+			dest = src;
+		}
 	}
 	else {
+		//16-bit register pair write
 		dest = src;
 	}
 }
 
-
-template <typename T>
-void GameBoy::ldW(T dest, T src) {
+void GameBoy::ldW(Byte& dest, const Word src) {
 	if (sizeof(src) == sizeof(Word)) {
 		addressSpace[dest] = static_cast<Byte>(src & 0xFF00) >> 8;
 		addressSpace[dest + 1] = static_cast<Byte>(src & 0xFF);
@@ -169,28 +172,22 @@ void GameBoy::sbc(T value) {
 	T carry = getFlag(CARRY_FLAG) ? 1 : 0;
 	T result = AF.hi - value - carry;
 
-	if (AF.hi < value + carry) {
+	if (AF.hi < value + carry)
 		setFlag(CARRY_FLAG);
-	}
-	else {
+	else
 		resetFlag(CARRY_FLAG);
-	}
 
-	if (result == 0) {
+	if (result == 0)
 		setFlag(ZERO_FLAG);
-	}
-	else {
+	else
 		resetFlag(ZERO_FLAG);
-	}
 
 	setFlag(SUBTRACT_FLAG);
 
-	if ((AF.hi & 0xF) < (value & 0xF) + carry) {
+	if ((AF.hi & 0xF) < (value & 0xF) + carry)
 		setFlag(HALFCARRY_FLAG);
-	}
-	else {
+	else
 		resetFlag(HALFCARRY_FLAG);
-	}
 
 	AF.hi = result;
 }
@@ -398,7 +395,6 @@ void GameBoy::dec(T& reg) {
 }
 
 void GameBoy::swap(Byte& value) {
-	// Extract the lower and upper nibbles of the register
 	const Byte lowerNibble = value & 0x0F;
 	const Byte upperNibble = (value >> 4) & 0x0F;
 
@@ -734,7 +730,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x08:
-			ldW(getWordPC(), SP);
+			ldW(addressSpace[getWordPC()], SP);
 			PC += 3;
 			addCycles(20);
 			break;
@@ -2237,7 +2233,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xFA:
-			ldW(AF.hi, addressSpace[getWordPC()]);
+			ld(AF.hi, addressSpace[getWordPC()]);
 			PC += 3;
 			addCycles(16);
 			break;

@@ -12,5 +12,8 @@ add_executable(GBpp src/main.cpp
         src/ppu.cpp
         src/timing.cpp
         src/extendedOpcodeResolver.cpp
+        src/mbc.cpp
+        src/addressSpace.cpp
+        src/addressSpace.hpp
 )
 target_link_libraries(GBpp ${SDL2_LIBRARIES})

@@ -9,21 +9,7 @@
 #include <vector>
 #include <SDL.h>
 #include "defines.hpp"
-
-//two bits per colour
-enum Colour {
-	black = 0b11,
-	darkGray = 0b10,
-	lightGray = 0b01,
-	white = 0b00
-};
-
-enum PPUMode {
-	mode0, // Horizontal Blank (Mode 0): No access to video RAM, occurs during horizontal blanking period.
-	mode1, // Vertical Blank (Mode 1): No access to video RAM, occurs during vertical blanking period.
-	mode2, // OAM Search (Mode 2): Access to OAM (Object Attribute Memory) only, sprite evaluation.
-	mode3 // Pixel Transfer (Mode 3): Access to both OAM and video RAM, actual pixel transfer to the screen.
-};
+#include "addressSpace.hpp"
 
 union RegisterPair {
 	Word reg; //register.reg == (hi << 8) + lo. (hi is more significant than lo)
@@ -32,64 +18,6 @@ union RegisterPair {
 		Byte lo;
 		Byte hi;
 	};
-};
-
-class AddressSpace {
-	bool bootromLoaded = true;
-	Byte bootrom[BOOTROM_SIZE] = {0};
-	std::ifstream game;
-
-public:
-	AddressSpace() {
-		// Initialize the memory to zero
-		memoryLayout = {};
-		std::memset(memoryLayout.memory, 0, sizeof(memoryLayout.memory));
-	}
-
-	// Nested union for the memory layout
-	union MemoryLayout {
-		Byte memory[0x10000];
-
-		struct {
-			Byte romBank1[ROM_BANK_SIZE]; // Mapped to 0x0000
-			Byte romBankSwitch[ROM_BANK_SIZE]; // Mapped to 0x4000
-			Byte vram[0x2000]; // Mapped to 0x8000
-			Byte externalRam[0x2000]; // Mapped to 0xA000
-			Byte memoryBank1[0x1000]; // Mapped to 0xC000
-			Byte memoryBank2[0x1000]; // Mapped to 0xD000
-			Byte echoRam[0x1E00]; // Mapped to 0xE000 (Echo RAM, mirrors 0xC000 to 0xDFFF)
-			Byte spriteAttributeTable[0xA0]; // Mapped to 0xFE00
-			Byte notUsable[0x60]; // Mapped to 0xFEA0
-			Byte io[0x80]; // Mapped to 0xFF00, 0xFF0F is interrupt flag
-			Byte specialRam[0x7F]; // Mapped to 0xFF80
-			Byte interuptEnableReg; // Mapped to 0xFFFF
-		};
-	} memoryLayout{};
-
-	void unmapBootrom();
-	void mapBootrom();
-	bool getBootromState() const;
-	void loadBootrom(const std::string& filename);
-	void loadGame(const std::string& filename);
-
-	//overload [] for echo ram and bootrom support
-	Byte operator[](const uint32_t address) const {
-		if (address >= 0xE000 && address < 0xFE00)
-			return memoryLayout.echoRam[address - 0x2000];
-		if (address < 0x0100 && bootromLoaded)
-			return bootrom[address];
-
-		return memoryLayout.memory[address];
-	}
-
-	Byte& operator[](const uint32_t address) {
-		if (address >= 0xE000 && address < 0xFE00)
-			return memoryLayout.echoRam[address - 0x2000];
-		if (address < 0x0100 && bootromLoaded)
-			return bootrom[address];
-
-		return memoryLayout.memory[address];
-	}
 };
 
 class GameBoy {
@@ -103,6 +31,7 @@ class GameBoy {
 	uint64_t lastScanline = 0;
 	uint64_t cyclesToStayInHblank = -1;
 	uint64_t lastDivUpdate = 0;
+	bool rendered = false;
 
 	uint8_t IME = 0; //enables interupts
 
@@ -120,7 +49,6 @@ class GameBoy {
 
 	//General purpose hardware registers
 	Byte* const JOYP = &addressSpace[0xFF00];
-
 	Byte* const SB = &addressSpace[0xFF01];
 	Byte* const SC = &addressSpace[0xFF02];
 	Byte* const DIV = &addressSpace[0xFF04];
@@ -223,6 +151,7 @@ class GameBoy {
 	//OPCODE FUNCTIONS
 	template <typename T>
 	void ld(T& dest, T src);
+	void ldW(Byte& dest, Word src);
 	template <typename T>
 	void orBitwise(T& dest, T src);
 	template <typename T>
@@ -248,8 +177,6 @@ class GameBoy {
 	void halt();
 	void daa();
 	void stop();
-	template <typename T>
-	void ldW(T dest, T src);
 	template <typename T>
 	void cp(T value);
 	template <typename T>

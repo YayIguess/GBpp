@@ -174,7 +174,7 @@ void GameBoy::SDL2setup() {
 	screen = SDL_CreateWindow("GBpp",
 	                          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 	                          RESOLUTION_X, RESOLUTION_Y,
-	                          SDL_WINDOW_OPENGL);
+	                          0);
 
 	// Create an SDL renderer to draw on the window
 	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
@@ -203,7 +203,8 @@ void GameBoy::SDL2present() {
 	if (frameDelay > frameTime) {
 		SDL_Delay(frameDelay - frameTime);
 	}
-	frameStart = SDL_GetTicks();
 
 	SDL_RenderPresent(renderer);
+	frameStart = SDL_GetTicks();
+	rendered = true;
 }
