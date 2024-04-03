@@ -46,61 +46,7 @@ class GameBoy {
 	Word PC = 0x0000; //program counter
 
 	AddressSpace addressSpace;
-
-	//General purpose hardware registers
-	Byte* const JOYP = &addressSpace[0xFF00];
-	Byte* const SB = &addressSpace[0xFF01];
-	Byte* const SC = &addressSpace[0xFF02];
-	Byte* const DIV = &addressSpace[0xFF04];
-
-	//Timer registers
-	Byte* const TIMA = &addressSpace[0xFF05];
-	Byte* const TMA = &addressSpace[0xFF15]; //unused
-	Byte* const TAC = &addressSpace[0xFF16];
-
-	//interrupt flag and enable
-	Byte* const IF = &addressSpace[0xFF0F];
-	Byte* const IE = &addressSpace[0xFFFF];
-
-	//Sound registers
-	Byte* const NR10 = &addressSpace[0xFF10];
-	Byte* const NR11 = &addressSpace[0xFF11];
-	Byte* const NR12 = &addressSpace[0xFF12];
-	Byte* const NR13 = &addressSpace[0xFF13];
-	Byte* const NR14 = &addressSpace[0xFF14];
-	Byte* const NR20 = &addressSpace[0xFF15]; //unused
-	Byte* const NR21 = &addressSpace[0xFF16];
-	Byte* const NR22 = &addressSpace[0xFF17];
-	Byte* const NR23 = &addressSpace[0xFF18];
-	Byte* const NR24 = &addressSpace[0xFF19];
-	Byte* const NR30 = &addressSpace[0xFF1A];
-	Byte* const NR31 = &addressSpace[0xFF1B];
-	Byte* const NR32 = &addressSpace[0xFF1C];
-	Byte* const NR33 = &addressSpace[0xFF1D];
-	Byte* const NR34 = &addressSpace[0xFF1E];
-	Byte* const NR40 = &addressSpace[0xFF1F]; //unused
-	Byte* const NR41 = &addressSpace[0xFF20];
-	Byte* const NR42 = &addressSpace[0xFF21];
-	Byte* const NR43 = &addressSpace[0xFF22];
-	Byte* const NR44 = &addressSpace[0xFF23];
-	Byte* const NR50 = &addressSpace[0xFF24];
-	Byte* const NR51 = &addressSpace[0xFF25];
-	Byte* const NR52 = &addressSpace[0xFF26];
-	Byte* const waveRam = &addressSpace[0xFF30]; //WaveRam[0x10]
-
-	//PPU registers
-	Byte* const LCDC = &addressSpace[0xFF40];
-	Byte* const STAT = &addressSpace[0xFF41];
-	Byte* const SCY = &addressSpace[0xFF42];
-	Byte* const SCX = &addressSpace[0xFF43];
-	Byte* const LY = &addressSpace[0xFF44];
-	Byte* const LYC = &addressSpace[0xFF45];
-	Byte* const DMA = &addressSpace[0xFF46];
-	Byte* const BGP = &addressSpace[0xFF47];
-	Byte* const OBP0 = &addressSpace[0xFF48];
-	Byte* const OBP1 = &addressSpace[0xFF49];
-	Byte* const WY = &addressSpace[0xFF4A];
-	Byte* const WX = &addressSpace[0xFF4B];
+	const AddressSpace& readOnlyAddressSpace = addressSpace;
 
 	PPUMode currentMode = PPUMode::mode0;
 
@@ -113,8 +59,6 @@ class GameBoy {
 	uint32_t frameStart = 0;
 	uint32_t frameTime = 0;
 	const int frameDelay = 1000 / V_SYNC;
-
-	bool testMBCWrite(const Byte& address);
 
 	void opcodeResolver();
 	void incLY();
@@ -131,7 +75,7 @@ class GameBoy {
 
 	void interruptHandler();
 	bool testInterruptEnabled(Byte interrupt) const;
-	void resetInterrupt(Byte interrupt) const;
+	void resetInterrupt(Byte interrupt);
 
 	void VBlankHandle();
 	void LCDStatHandle();
@@ -162,8 +106,8 @@ class GameBoy {
 	void xorBitwise(T& dest, T src);
 	void bit(Byte testBit, Byte reg);
 	void extendedOpcodeResolver();
-	static void set(const uint8_t testBit, uint8_t& reg);
-	static void res(const uint8_t testBit, uint8_t& reg);
+	static void set(uint8_t testBit, uint8_t& reg);
+	static void res(uint8_t testBit, uint8_t& reg);
 	template <typename T>
 	void jp(T address);
 	template <typename T>

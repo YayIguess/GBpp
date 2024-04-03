@@ -16,28 +16,28 @@ Word GameBoy::getWordPC() {
 	RegisterPair word = {0};
 
 	//remember little endianness
-	word.lo = addressSpace[PC + 1];
-	word.hi = addressSpace[PC + 2];
+	word.lo = readOnlyAddressSpace[PC + 1];
+	word.hi = readOnlyAddressSpace[PC + 2];
 
 	return word.reg;
 }
 
 Byte GameBoy::getBytePC() {
-	return addressSpace[PC + 1];
+	return readOnlyAddressSpace[PC + 1];
 }
 
 Word GameBoy::getWordSP() {
 	RegisterPair word = {0};
 
 	//remember little endianness
-	word.lo = addressSpace[SP++];
-	word.hi = addressSpace[SP++];
+	word.lo = readOnlyAddressSpace[SP++];
+	word.hi = readOnlyAddressSpace[SP++];
 
 	return word.reg;
 }
 
 Byte GameBoy::getByteSP() {
-	return addressSpace[SP++];
+	return readOnlyAddressSpace[SP++];
 }
 
 void GameBoy::ret() {
@@ -47,8 +47,8 @@ void GameBoy::ret() {
 template <typename T>
 void GameBoy::ld(T& dest, T src) {
 	if constexpr (std::is_same_v<T, Byte>) {
-		if (&dest == DIV) {
-			*DIV = 0x00;
+		if (&dest == &addressSpace.memoryLayout.DIV) {
+			addressSpace.memoryLayout.DIV = 0x00;
 			lastDivUpdate = cycles;
 		}
 		else {
@@ -90,7 +90,7 @@ void GameBoy::add(T& reg, T value) {
 		else
 			resetFlag(HALFCARRY_FLAG);
 		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if ((((value & 0xFFFF) + (reg & 0xFFFF)) & 0x10000) == 0x10000)
+		if ((static_cast<unsigned>(value) + static_cast<unsigned>(reg)) & 0x10000)
 			setFlag(CARRY_FLAG);
 		else
 			resetFlag(CARRY_FLAG);
@@ -98,10 +98,12 @@ void GameBoy::add(T& reg, T value) {
 
 	reg += value;
 
-	if (reg == 0)
-		setFlag(ZERO_FLAG);
-	else
-		resetFlag(ZERO_FLAG);
+	if (sizeof(reg) == sizeof(Byte)) {
+		if (reg == 0)
+			setFlag(ZERO_FLAG);
+		else
+			resetFlag(ZERO_FLAG);
+	}
 
 	resetFlag(SUBTRACT_FLAG);
 }
@@ -225,6 +227,8 @@ void GameBoy::orBitwise(T& dest, T src) {
 
 	if (dest == 0)
 		setFlag(ZERO_FLAG);
+	else
+		resetFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
 	resetFlag(HALFCARRY_FLAG);
@@ -237,6 +241,8 @@ void GameBoy::andBitwise(T& dest, T src) {
 
 	if (dest == 0)
 		setFlag(ZERO_FLAG);
+	else
+		resetFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
 	setFlag(HALFCARRY_FLAG);
@@ -249,6 +255,8 @@ void GameBoy::xorBitwise(T& dest, T src) {
 
 	if (dest == 0)
 		setFlag(ZERO_FLAG);
+	else
+		resetFlag(ZERO_FLAG);
 
 	resetFlag(SUBTRACT_FLAG);
 	resetFlag(CARRY_FLAG);
@@ -473,7 +481,7 @@ void GameBoy::rr(Byte& reg) {
 	reg >>= 1;
 
 	if (getFlag(CARRY_FLAG))
-		AF.hi |= 0x80;
+		reg |= 0x80;
 
 	if (lsb)
 		setFlag(CARRY_FLAG);
@@ -628,6 +636,7 @@ void GameBoy::srl(Byte& reg) {
 template <typename T>
 void GameBoy::pop(T& reg) {
 	reg = getWordSP();
+	AF.reg &= 0xFFF0;
 }
 
 template <typename T>
@@ -636,9 +645,9 @@ void GameBoy::push(T reg) {
 	RegisterPair temp = {0};
 	temp.lo = reg & 0xFF;
 	temp.hi = reg >> 8;
-	SP--;
+	SP -= 1;
 	addressSpace[SP] = temp.hi;
-	SP--;
+	SP -= 1;
 	addressSpace[SP] = temp.lo;
 }
 
@@ -678,9 +687,9 @@ void GameBoy::ccf() {
 void GameBoy::stop() {}
 
 void GameBoy::opcodeResolver() {
-	if (addressSpace[PC] != 0xCB) {
+	if (readOnlyAddressSpace[PC] != 0xCB) {
 		bool jumped;
-		switch (addressSpace[PC]) {
+		switch (readOnlyAddressSpace[PC]) {
 		case 0x00:
 			//NOP
 			PC += 1;
@@ -742,7 +751,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x0A:
-			ld(AF.hi, addressSpace[BC.reg]);
+			ld(AF.hi, readOnlyAddressSpace[BC.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -790,13 +799,13 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x12:
-			ld(addressSpace[BC.reg], AF.hi);
+			ld(addressSpace[DE.reg], AF.hi);
 			PC += 1;
 			addCycles(8);
 			break;
 
 		case 0x13:
-			DE.reg++; //no flags change no just inc it manually
+			DE.reg += 1; //no flags change no just inc it manually
 			PC += 1;
 			addCycles(8);
 			break;
@@ -837,7 +846,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x1A:
-			ld(AF.hi, addressSpace[DE.reg]);
+			ld(AF.hi, readOnlyAddressSpace[DE.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -891,7 +900,7 @@ void GameBoy::opcodeResolver() {
 
 		case 0x22:
 			ld(addressSpace[HL.reg], AF.hi);
-			HL.reg++;
+			HL.reg += 1;
 			PC += 1;
 			addCycles(8);
 			break;
@@ -944,7 +953,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x2A:
-			ld(AF.hi, addressSpace[HL.reg]);
+			ld(AF.hi, readOnlyAddressSpace[HL.reg]);
 			HL.reg += 1;
 			PC += 1;
 			addCycles(8);
@@ -963,7 +972,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x2D:
-			dec(HL.hi);
+			dec(HL.lo);
 			PC += 1;
 			addCycles(4);
 			break;
@@ -999,7 +1008,7 @@ void GameBoy::opcodeResolver() {
 
 		case 0x32:
 			ld(addressSpace[HL.reg], AF.hi);
-			HL.reg--;
+			HL.reg -= 1;
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1052,14 +1061,14 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x3A:
-			ld(AF.hi, addressSpace[HL.reg]);
+			ld(AF.hi, readOnlyAddressSpace[HL.reg]);
 			HL.reg -= 1;
 			PC += 1;
 			addCycles(8);
 			break;
 
 		case 0x3B:
-			SP--;
+			SP -= 1;
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1125,7 +1134,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x46:
-			ld(BC.hi, addressSpace[HL.reg]);
+			ld(BC.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1173,7 +1182,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x4E:
-			ld(BC.lo, addressSpace[HL.reg]);
+			ld(BC.lo, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1221,7 +1230,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x56:
-			ld(DE.hi, addressSpace[HL.reg]);
+			ld(DE.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1269,7 +1278,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x5E:
-			ld(DE.lo, addressSpace[HL.reg]);
+			ld(DE.lo, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1317,7 +1326,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x66:
-			ld(HL.hi, addressSpace[HL.reg]);
+			ld(HL.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1365,7 +1374,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x6E:
-			ld(HL.lo, addressSpace[HL.reg]);
+			ld(HL.lo, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1461,7 +1470,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x7E:
-			ld(AF.hi, addressSpace[HL.reg]);
+			ld(AF.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1509,7 +1518,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x86:
-			add(AF.hi, addressSpace[HL.reg]);
+			add(AF.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1557,7 +1566,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x8E:
-			adc(AF.hi, addressSpace[HL.reg]);
+			adc(AF.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1605,7 +1614,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x96:
-			sub(addressSpace[HL.reg]);
+			sub(readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1653,7 +1662,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x9E:
-			sbc(addressSpace[HL.reg]);
+			sbc(readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1701,7 +1710,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xA6:
-			andBitwise(AF.hi, addressSpace[HL.reg]);
+			andBitwise(AF.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1749,7 +1758,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xAE:
-			xorBitwise(AF.hi, addressSpace[HL.reg]);
+			xorBitwise(AF.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1797,7 +1806,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xB6:
-			orBitwise(AF.hi, addressSpace[HL.reg]);
+			orBitwise(AF.hi, readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1845,7 +1854,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xBE:
-			cp(addressSpace[HL.reg]);
+			cp(readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -2091,7 +2100,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xE2:
-			ld(addressSpace[BC.lo + 0xFF00], AF.hi);
+			ld(addressSpace[0xFF00 + BC.lo], AF.hi);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -2115,20 +2124,19 @@ void GameBoy::opcodeResolver() {
 
 		case 0xE8:
 			{
-				const auto immediate = static_cast<int8_t>(getBytePC());
-				const Word result = SP + static_cast<int16_t>(immediate);
+				const int16_t immediate = static_cast<int8_t>(getBytePC());
 
-				if (((SP ^ immediate ^ result) & 0x10) != 0)
+				if ((SP & 0xF) + (immediate & 0xF) > 0xF)
 					setFlag(HALFCARRY_FLAG);
 				else
 					resetFlag(HALFCARRY_FLAG);
 
-				if (((SP ^ immediate ^ result) & 0x100) != 0)
+				if ((SP & 0xFF) + (immediate & 0xFF) > 0xFF)
 					setFlag(CARRY_FLAG);
 				else
 					resetFlag(CARRY_FLAG);
 
-				SP = result;
+				SP += immediate;
 
 				resetFlag(ZERO_FLAG);
 				resetFlag(SUBTRACT_FLAG);
@@ -2161,7 +2169,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xF0:
-			ld(AF.hi, addressSpace[0xFF00 + getBytePC()]);
+			ld(AF.hi, readOnlyAddressSpace[0xFF00 + getBytePC()]);
 			PC += 2;
 			addCycles(12);
 			break;
@@ -2173,7 +2181,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xF2:
-			ld(AF.hi, addressSpace[0xFF00 + BC.lo]);
+			ld(AF.hi, readOnlyAddressSpace[0xFF00 + BC.lo]);
 			PC += 1;
 			addCycles(12);
 			break;
@@ -2203,20 +2211,20 @@ void GameBoy::opcodeResolver() {
 
 		case 0xF8:
 			{
-				const auto n = static_cast<int8_t>(getBytePC());
-				const Word result = SP + n;
+				const int16_t immediate = static_cast<int8_t>(getBytePC());
+				HL.reg = SP + immediate;
 
-				//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-				if ((((result & 0xF) + (HL.reg & 0xF)) & 0x10) == 0x10)
+				if ((SP & 0xF) + (immediate & 0xF) > 0xF)
 					setFlag(HALFCARRY_FLAG);
 				else
 					resetFlag(HALFCARRY_FLAG);
-				//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-				if ((((result & 0xFF) + (HL.reg & 0xFF)) & 0x100) == 0x100)
+
+
+				if ((SP & 0xFF) + (immediate & 0xFF) > 0xFF)
 					setFlag(CARRY_FLAG);
 				else
 					resetFlag(CARRY_FLAG);
-				HL.reg = result; // Load the result into HL
+
 
 				resetFlag(ZERO_FLAG);
 				resetFlag(SUBTRACT_FLAG);
@@ -2233,7 +2241,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xFA:
-			ld(AF.hi, addressSpace[getWordPC()]);
+			ld(AF.hi, readOnlyAddressSpace[getWordPC()]);
 			PC += 3;
 			addCycles(16);
 			break;

@@ -3,7 +3,7 @@
 void GameBoy::extendedOpcodeResolver() {
 	PC += 1;
 
-	switch (addressSpace[PC]) {
+	switch (readOnlyAddressSpace[PC]) {
 	case 0x00:
 		rlc(BC.hi);
 		PC += 1;
@@ -425,7 +425,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x46:
-		bit(0, addressSpace[HL.reg]);
+		bit(0, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;
@@ -473,7 +473,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x4E:
-		bit(1, addressSpace[HL.reg]);
+		bit(1, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;
@@ -521,7 +521,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x56:
-		bit(2, addressSpace[HL.reg]);
+		bit(2, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;
@@ -569,7 +569,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x5E:
-		bit(3, addressSpace[HL.reg]);
+		bit(3, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;
@@ -617,7 +617,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x66:
-		bit(4, addressSpace[HL.reg]);
+		bit(4, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;
@@ -665,7 +665,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x6E:
-		bit(5, addressSpace[HL.reg]);
+		bit(5, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;
@@ -713,7 +713,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x76:
-		bit(6, addressSpace[HL.reg]);
+		bit(6, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;
@@ -761,7 +761,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x7E:
-		bit(7, addressSpace[HL.reg]);
+		bit(7, readOnlyAddressSpace[HL.reg]);
 		PC += 1;
 		addCycles(12);
 		break;

@@ -42,6 +42,6 @@ void AddressSpace::loadGame(const std::string& filename) {
 	            std::istream_iterator<Byte>(rom),
 	            std::istream_iterator<Byte>());
 
-	memcpy(memoryLayout.romBank0, game.data(), ROM_BANK_SIZE);
-	memcpy(memoryLayout.romBankSwitch, game.data() + ROM_BANK_SIZE, ROM_BANK_SIZE);
+	memoryLayout.romBank0 = game.data();
+	memoryLayout.romBankSwitch = game.data() + ROM_BANK_SIZE;
 }

@@ -4,9 +4,7 @@
 void GameBoy::timingHandler() {
 	if (cycles - lastDivUpdate >= DIVIDER_REGISTER_FREQ) {
 		const uint8_t increments = (cycles - lastDivUpdate) / DIVIDER_REGISTER_FREQ;
-
-		(*DIV) += increments;
-
+		addressSpace.memoryLayout.DIV += increments;
 		lastDivUpdate += increments * DIVIDER_REGISTER_FREQ;
 	}
 }

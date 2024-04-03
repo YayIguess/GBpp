@@ -2,27 +2,32 @@
 #include "gameboy.hpp"
 
 bool GameBoy::testInterruptEnabled(const Byte interrupt) const {
-	return (*IE) & static_cast<Byte>(1 << interrupt);
+	return readOnlyAddressSpace.memoryLayout.IE & static_cast<Byte>(1 << interrupt);
 }
 
-void GameBoy::resetInterrupt(const Byte interrupt) const {
-	*IF &= ~(1 << interrupt);
-	*IF |= 0xE0;
+void GameBoy::resetInterrupt(const Byte interrupt) {
+	addressSpace.memoryLayout.IF &= ~(1 << interrupt);
+	addressSpace.memoryLayout.IF |= 0xE0;
 }
 
 void GameBoy::interruptHandler() {
 	if (!IME)
 		return;
 
-	if (*IF & static_cast<Byte>(1 << VBLANK_INTERRUPT) && testInterruptEnabled(VBLANK_INTERRUPT))
+	if (readOnlyAddressSpace.memoryLayout.IF & static_cast<Byte>(1 << VBLANK_INTERRUPT) && testInterruptEnabled(
+		VBLANK_INTERRUPT))
 		VBlankHandle();
-	if (*IF & static_cast<Byte>(1 << LCD_STAT_INTERRUPT) && testInterruptEnabled(LCD_STAT_INTERRUPT))
+	if (readOnlyAddressSpace.memoryLayout.IF & static_cast<Byte>(1 << LCD_STAT_INTERRUPT) && testInterruptEnabled(
+		LCD_STAT_INTERRUPT))
 		LCDStatHandle();
-	if (*IF & static_cast<Byte>(1 << TIMER_INTERRUPT) && testInterruptEnabled(TIMER_INTERRUPT))
+	if (readOnlyAddressSpace.memoryLayout.IF & static_cast<Byte>(1 << TIMER_INTERRUPT) && testInterruptEnabled(
+		TIMER_INTERRUPT))
 		timerHandle();
-	if (*IF & static_cast<Byte>(1 << SERIAL_INTERRUPT) && testInterruptEnabled(SERIAL_INTERRUPT))
+	if (readOnlyAddressSpace.memoryLayout.IF & static_cast<Byte>(1 << SERIAL_INTERRUPT) && testInterruptEnabled(
+		SERIAL_INTERRUPT))
 		serialHandle();
-	if (*IF & static_cast<Byte>(1 << JOYPAD_INTERRUPT) && testInterruptEnabled(JOYPAD_INTERRUPT))
+	if (readOnlyAddressSpace.memoryLayout.IF & static_cast<Byte>(1 << JOYPAD_INTERRUPT) && testInterruptEnabled(
+		JOYPAD_INTERRUPT))
 		joypadHandle();
 }
 
