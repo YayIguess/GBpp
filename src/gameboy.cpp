@@ -9,6 +9,42 @@ void GameBoy::addCycles(const uint8_t ticks) {
 	lastOpTicks = ticks;
 }
 
+GameboyTestState GameBoy::runTest(GameboyTestState initial) {
+	addressSpace.setTesting(true);
+
+	PC = initial.PC;
+	SP = initial.SP;
+	AF.hi = initial.A;
+	AF.lo = initial.F;
+	BC.hi = initial.B;
+	BC.lo = initial.C;
+	DE.hi = initial.D;
+	DE.lo = initial.E;
+	HL.hi = initial.H;
+	HL.lo = initial.L;
+	addressSpace.memoryLayout.IE = 1;
+
+	for (const auto& [addr, val] : initial.RAM) {
+		addressSpace[addr] = val;
+	}
+
+	opcodeResolver();
+
+	std::vector<std::tuple<Word, Byte>> returnRAM;
+	for (const auto& [addr, val] : initial.RAM) {
+		returnRAM.emplace_back(addr, addressSpace[addr]);
+	}
+	return {
+		PC, SP,
+		AF.hi, AF.lo,
+		BC.hi, BC.lo,
+		DE.hi, DE.lo,
+		HL.hi, HL.lo,
+		returnRAM
+	};
+}
+
+
 void GameBoy::start(std::string bootrom, std::string game) {
 	addressSpace.loadBootrom(bootrom);
 	addressSpace.loadGame(game);
@@ -20,7 +56,7 @@ void GameBoy::start(std::string bootrom, std::string game) {
 	addressSpace.memoryLayout.SC = 0x7E;
 
 	bool quit = false;
-
+	bool setIME = false;
 	bool display = false;
 
 	while (!quit) {
@@ -68,6 +104,14 @@ void GameBoy::start(std::string bootrom, std::string game) {
 				lastRefresh = 0;
 				addressSpace.memoryLayout.LY = 0x00;
 				addressSpace.memoryLayout.STAT &= 0xfc;
+			}
+			if (setIME) {
+				IME = 1;
+				setIME = false;
+			}
+			if (IME_togge) {
+				setIME = true;
+				IME_togge = false;
 			}
 		}
 		rendered = false;

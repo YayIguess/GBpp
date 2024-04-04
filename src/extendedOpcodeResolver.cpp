@@ -767,7 +767,7 @@ void GameBoy::extendedOpcodeResolver() {
 		break;
 
 	case 0x7F:
-		bit(3, AF.hi);
+		bit(7, AF.hi);
 		PC += 1;
 		addCycles(8);
 		break;

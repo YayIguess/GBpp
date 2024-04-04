@@ -15,5 +15,6 @@ add_executable(GBpp src/main.cpp
         src/mbc.cpp
         src/addressSpace.cpp
         src/addressSpace.hpp
+        src/testing.hpp
 )
 target_link_libraries(GBpp ${SDL2_LIBRARIES})

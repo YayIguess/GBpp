@@ -45,3 +45,7 @@ void AddressSpace::loadGame(const std::string& filename) {
 	memoryLayout.romBank0 = game.data();
 	memoryLayout.romBankSwitch = game.data() + ROM_BANK_SIZE;
 }
+
+void AddressSpace::setTesting(const bool state) {
+	testing = state;
+}

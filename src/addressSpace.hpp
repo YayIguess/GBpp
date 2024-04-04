@@ -13,14 +13,15 @@ class AddressSpace {
 	bool bootromLoaded = true;
 	Byte bootrom[BOOTROM_SIZE] = {0};
 	std::vector<Byte> game;
+	bool testing;
+	Byte testRam[0xFFFF];
+	Byte* cartridgeRam = nullptr;
 
 public:
 	AddressSpace() {
 		// Initialize the memory to zero
 		memoryLayout = {};
 	}
-
-	Byte* cartridgeRam = nullptr;
 
 	struct {
 		Byte* romBank0; //[ROM_BANK_SIZE] Mapped to 0x0000
@@ -117,8 +118,12 @@ public:
 	Byte latchClockData = 0x00;
 	Byte ramBankRTCRegister = 0x00;
 
+	void setTesting(bool state);
+
 	//read
 	Byte operator[](const Word address) const {
+		if (testing)
+			return testRam[address];
 		if (address < 0x0100 && bootromLoaded)
 			return bootrom[address];
 		if (address < 0x4000)
@@ -248,6 +253,8 @@ public:
 
 	//write
 	Byte& operator[](const Word address) {
+		if (testing)
+			return testRam[address];
 		if (address < 0x0100 && bootromLoaded)
 			return bootrom[address];
 		if (address < 0x8000)

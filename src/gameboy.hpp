@@ -3,13 +3,11 @@
 
 #include <filesystem>
 #include <cstdint>
-#include <cstring>
 #include <string>
-#include <fstream>
-#include <vector>
 #include <SDL.h>
 #include "defines.hpp"
 #include "addressSpace.hpp"
+#include "testing.hpp"
 
 union RegisterPair {
 	Word reg; //register.reg == (hi << 8) + lo. (hi is more significant than lo)
@@ -34,6 +32,9 @@ class GameBoy {
 	bool rendered = false;
 
 	uint8_t IME = 0; //enables interupts
+	// EI is actually "disable interrupts for one instruction, then enable them"
+	// This keeps track of that
+	bool IME_togge = false;
 
 	//Accumulator and flags
 	RegisterPair AF = {0};
@@ -97,7 +98,7 @@ class GameBoy {
 	//OPCODE FUNCTIONS
 	template <typename T>
 	void ld(T& dest, T src);
-	void ldW(Byte& dest, Word src);
+	void ldW(Word destAddr, Word src);
 	template <typename T>
 	void orBitwise(T& dest, T src);
 	template <typename T>
@@ -123,20 +124,16 @@ class GameBoy {
 	void halt();
 	void daa();
 	void stop();
-	template <typename T>
-	void cp(T value);
+	void cp(Byte value);
 	template <typename T>
 	void dec(T& reg);
 	template <typename T>
 	bool jrZ(T offset);
-	template <typename T>
-	void sub(T value);
-	template <class T>
-	void sbc(T value);
+	void sub(Byte value);
+	void sbc(Byte value);
 	template <typename T>
 	void jr(T OFFSET);
-	template <typename T>
-	void push(T reg);
+	void push(Word reg);
 	void rl(Byte& reg);
 	void sla(Byte& reg);
 	void sra(uint8_t& reg);
@@ -155,8 +152,7 @@ class GameBoy {
 	void ret();
 	template <typename T>
 	void add(T& reg, T value);
-	template <class T>
-	void adc(T& reg, T value);
+	void adc(Byte value);
 	void cpl();
 	void scf();
 	void ccf();
@@ -166,6 +162,8 @@ public:
 	void start(std::string bootrom, std::string game);
 	void SDL2setup();
 	void SDL2destroy() const;
+
+	GameboyTestState runTest(GameboyTestState initial);
 };
 
 #endif //GBPP_SRC_GAMEBOY_HPP_

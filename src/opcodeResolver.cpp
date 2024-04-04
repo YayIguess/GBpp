@@ -41,7 +41,8 @@ Byte GameBoy::getByteSP() {
 }
 
 void GameBoy::ret() {
-	pop(PC);
+	PC = readOnlyAddressSpace[SP++];
+	PC |= readOnlyAddressSpace[SP++] << 8;
 }
 
 template <typename T>
@@ -61,22 +62,18 @@ void GameBoy::ld(T& dest, T src) {
 	}
 }
 
-void GameBoy::ldW(Byte& dest, const Word src) {
-	if (sizeof(src) == sizeof(Word)) {
-		addressSpace[dest] = static_cast<Byte>(src & 0xFF00) >> 8;
-		addressSpace[dest + 1] = static_cast<Byte>(src & 0xFF);
-	}
+void GameBoy::ldW(const Word destAddr, const Word src) {
+	addressSpace[destAddr] = static_cast<Byte>(src & 0xFF);
+	addressSpace[destAddr + 1] = static_cast<Byte>((src & 0xFF00) >> 8);
 }
 
 template <typename T>
 void GameBoy::add(T& reg, T value) {
 	if (sizeof(reg) == sizeof(Byte)) {
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 		if ((((value & 0xF) + (reg & 0xF)) & 0x10) == 0x10)
 			setFlag(HALFCARRY_FLAG);
 		else
 			resetFlag(HALFCARRY_FLAG);
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 		if ((((value & 0xFF) + (reg & 0xFF)) & 0x100) == 0x100)
 			setFlag(CARRY_FLAG);
 		else
@@ -84,12 +81,10 @@ void GameBoy::add(T& reg, T value) {
 	}
 
 	if (sizeof(reg) == sizeof(Word)) {
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if ((((value & 0xFFF) + (reg & 0xFFF)) & 0x1000) == 0x1000)
+		if (((value & 0xFFF) + (reg & 0xFFF)) & 0x1000)
 			setFlag(HALFCARRY_FLAG);
 		else
 			resetFlag(HALFCARRY_FLAG);
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
 		if ((static_cast<unsigned>(value) + static_cast<unsigned>(reg)) & 0x10000)
 			setFlag(CARRY_FLAG);
 		else
@@ -108,39 +103,22 @@ void GameBoy::add(T& reg, T value) {
 	resetFlag(SUBTRACT_FLAG);
 }
 
-template <typename T>
-void GameBoy::adc(T& reg, T value) {
-	T carry = getFlag(CARRY_FLAG) ? 1 : 0;
+void GameBoy::adc(const Byte value) {
+	Byte carry = getFlag(CARRY_FLAG) ? 1 : 0;
 
-	if (sizeof(reg) == sizeof(Byte)) {
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if ((((value & 0xF) + (reg & 0xF)) & 0x10) == 0x10)
-			setFlag(HALFCARRY_FLAG);
-		else
-			resetFlag(HALFCARRY_FLAG);
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if ((((value & 0xFF) + (reg & 0xFF)) & 0x100) == 0x100)
-			setFlag(CARRY_FLAG);
-		else
-			resetFlag(CARRY_FLAG);
-	}
+	if ((AF.hi & 0xF) + (value & 0xF) + carry > 0xF)
+		setFlag(HALFCARRY_FLAG);
+	else
+		resetFlag(HALFCARRY_FLAG);
+	if ((value & 0xFF) + (AF.hi & 0xFF) + carry > 0xFF)
+		setFlag(CARRY_FLAG);
+	else
+		resetFlag(CARRY_FLAG);
 
-	if (sizeof(reg) == sizeof(Word)) {
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if ((((value & 0xFFF) + (reg & 0xFFF)) & 0x1000) == 0x1000)
-			setFlag(HALFCARRY_FLAG);
-		else
-			resetFlag(HALFCARRY_FLAG);
-		//halfcarry test https://robdor.com/2016/08/10/gameboy-emulator-half-carry-flag/
-		if ((((value & 0xFFFF) + (reg & 0xFFFF)) & 0x10000) == 0x10000)
-			setFlag(CARRY_FLAG);
-		else
-			resetFlag(CARRY_FLAG);
-	}
 
-	reg += value + carry;
+	AF.hi += value + carry;
 
-	if (reg == 0)
+	if (AF.hi == 0)
 		setFlag(ZERO_FLAG);
 	else
 		resetFlag(ZERO_FLAG);
@@ -148,33 +126,30 @@ void GameBoy::adc(T& reg, T value) {
 	resetFlag(SUBTRACT_FLAG);
 }
 
-template <typename T>
-void GameBoy::sub(T value) {
-	if (AF.hi < value) {
+void GameBoy::sub(const Byte value) {
+	if (AF.hi < value)
 		setFlag(CARRY_FLAG);
-		resetFlag(ZERO_FLAG);
-	}
-	else if (AF.hi == value) {
-		setFlag(ZERO_FLAG);
+	else
 		resetFlag(CARRY_FLAG);
-	}
+	if (AF.hi == value)
+		setFlag(ZERO_FLAG);
+	else
+		resetFlag(ZERO_FLAG);
+	if ((AF.hi & 0xf) < (value & 0xf))
+		setFlag(HALFCARRY_FLAG);
+	else
+		resetFlag(HALFCARRY_FLAG);
 
 	AF.hi -= value;
 
 	setFlag(SUBTRACT_FLAG);
-	//halfcarry test https://www.reddit.com/r/EmuDev/comments/4clh23/trouble_with_halfcarrycarry_flag/
-	if (0 > (((AF.hi) & 0xf) - (value & 0xf)))
-		setFlag(HALFCARRY_FLAG);
-	else
-		resetFlag(HALFCARRY_FLAG);
 }
 
-template <typename T>
-void GameBoy::sbc(T value) {
-	T carry = getFlag(CARRY_FLAG) ? 1 : 0;
-	T result = AF.hi - value - carry;
+void GameBoy::sbc(const Byte value) {
+	const Byte carry = getFlag(CARRY_FLAG) ? 1 : 0;
+	const Byte result = AF.hi - value - carry;
 
-	if (AF.hi < value + carry)
+	if ((static_cast<unsigned>(AF.hi) - static_cast<unsigned>(value) - carry) > 0xFF)
 		setFlag(CARRY_FLAG);
 	else
 		resetFlag(CARRY_FLAG);
@@ -184,14 +159,14 @@ void GameBoy::sbc(T value) {
 	else
 		resetFlag(ZERO_FLAG);
 
-	setFlag(SUBTRACT_FLAG);
-
 	if ((AF.hi & 0xF) < (value & 0xF) + carry)
 		setFlag(HALFCARRY_FLAG);
 	else
 		resetFlag(HALFCARRY_FLAG);
 
 	AF.hi = result;
+
+	setFlag(SUBTRACT_FLAG);
 }
 
 //https://gbdev.gg8.se/wiki/articles/DAA
@@ -361,25 +336,23 @@ void GameBoy::call(T address) {
 	PC = address;
 }
 
-template <typename T>
-void GameBoy::cp(T value) //compare
+void GameBoy::cp(const Byte value) //compare
 {
+	resetFlag(ZERO_FLAG);
+	resetFlag(CARRY_FLAG);
+	resetFlag(HALFCARRY_FLAG);
+
+	if (AF.hi == value) {
+		setFlag(ZERO_FLAG);
+	}
+	if ((AF.hi & 0xF) < (value & 0xF)) {
+		setFlag(HALFCARRY_FLAG);
+	}
 	if (AF.hi < value) {
 		setFlag(CARRY_FLAG);
-		resetFlag(ZERO_FLAG);
-	}
-	else if (AF.hi == value) {
-		setFlag(ZERO_FLAG);
-		resetFlag(CARRY_FLAG);
 	}
 
 	setFlag(SUBTRACT_FLAG);
-
-	//halfcarry test https://www.reddit.com/r/EmuDev/comments/4clh23/trouble_with_halfcarrycarry_flag/
-	if (0 > (((AF.hi) & 0xf) - (value & 0xf)))
-		setFlag(HALFCARRY_FLAG);
-	else
-		resetFlag(HALFCARRY_FLAG);
 }
 
 template <typename T>
@@ -639,16 +612,10 @@ void GameBoy::pop(T& reg) {
 	AF.reg &= 0xFFF0;
 }
 
-template <typename T>
-void GameBoy::push(T reg) {
+void GameBoy::push(const Word reg) {
 	//little endian
-	RegisterPair temp = {0};
-	temp.lo = reg & 0xFF;
-	temp.hi = reg >> 8;
-	SP -= 1;
-	addressSpace[SP] = temp.hi;
-	SP -= 1;
-	addressSpace[SP] = temp.lo;
+	addressSpace[--SP] = reg >> 8;
+	addressSpace[--SP] = reg & 0xFF;
 }
 
 template <typename T>
@@ -658,6 +625,7 @@ void GameBoy::jp(T address) {
 
 template <typename T>
 void GameBoy::rst(T address) {
+	PC += 1;
 	push(PC);
 	PC = address;
 }
@@ -739,7 +707,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x08:
-			ldW(addressSpace[getWordPC()], SP);
+			ldW(getWordPC(), SP);
 			PC += 3;
 			addCycles(20);
 			break;
@@ -840,7 +808,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x19:
-			add(HL.reg, BC.reg);
+			add(HL.reg, DE.reg);
 			PC += 1;
 			addCycles(8);
 			break;
@@ -1530,49 +1498,49 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0x88:
-			adc(AF.hi, BC.hi);
+			adc(BC.hi);
 			PC += 1;
 			addCycles(4);
 			break;
 
 		case 0x89:
-			adc(AF.hi, BC.lo);
+			adc(BC.lo);
 			PC += 1;
 			addCycles(4);
 			break;
 
 		case 0x8A:
-			adc(AF.hi, DE.hi);
+			adc(DE.hi);
 			PC += 1;
 			addCycles(4);
 			break;
 
 		case 0x8B:
-			adc(AF.hi, DE.lo);
+			adc(DE.lo);
 			PC += 1;
 			addCycles(4);
 			break;
 
 		case 0x8C:
-			adc(AF.hi, HL.hi);
+			adc(HL.hi);
 			PC += 1;
 			addCycles(4);
 			break;
 
 		case 0x8D:
-			adc(AF.hi, HL.lo);
+			adc(HL.lo);
 			PC += 1;
 			addCycles(4);
 			break;
 
 		case 0x8E:
-			adc(AF.hi, readOnlyAddressSpace[HL.reg]);
+			adc(readOnlyAddressSpace[HL.reg]);
 			PC += 1;
 			addCycles(8);
 			break;
 
 		case 0x8F:
-			adc(AF.hi, AF.hi);
+			adc(AF.hi);
 			PC += 1;
 			addCycles(4);
 			break;
@@ -1970,7 +1938,7 @@ void GameBoy::opcodeResolver() {
 			break;
 
 		case 0xCE:
-			adc(AF.hi, getBytePC());
+			adc(getBytePC());
 			PC += 2;
 			addCycles(8);
 			break;
@@ -2246,10 +2214,10 @@ void GameBoy::opcodeResolver() {
 			addCycles(16);
 			break;
 
-		//should not actually enable until the next opcode
-		//EI (0xFB) then DI (0xF3) does not allow interrupts to happen
+		//EI (0xFB) then DI (0xF3) never allows interrupts to happen
 		case 0xFB:
-			IME = 1;
+			IME = 0;
+			IME_togge = true;
 			PC += 1;
 			addCycles(4);
 			break;
