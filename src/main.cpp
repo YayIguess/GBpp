@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
 	auto* gb = new GameBoy();
 	gb->SDL2setup();
 	//runJSONTests(gb);
-	gb->start("../dmg_boot.bin", "../roms/07-jr,jp,call,ret,rst.gb");
+	gb->start("../dmg_boot.bin", "../roms/dmg-acid2.gb");
 	gb->SDL2destroy();
 	delete gb;
 

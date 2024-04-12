@@ -50,6 +50,13 @@ class GameBoy {
 	const AddressSpace& readOnlyAddressSpace = addressSpace;
 
 	PPUMode currentMode = PPUMode::mode0;
+	Byte windowLineCounter = 0;
+
+	Byte prevTMA = 0;
+	uint64_t lastTIMAUpdate = 0;
+	bool halted = false;
+	bool haltBug = true;
+	bool stopped = false;
 
 	//3 colour channels
 	uint32_t* framebuffer = new uint32_t[RESOLUTION_X * RESOLUTION_Y * SCREEN_BPP];
@@ -61,7 +68,12 @@ class GameBoy {
 	uint32_t frameTime = 0;
 	const int frameDelay = 1000 / V_SYNC;
 
+	Input joypadInput;
+
 	void opcodeResolver();
+
+	bool statInteruptLine = false;
+	bool testLCDCBitEnabled(Byte bit) const;
 	void incLY();
 	void ppuUpdate();
 	void drawLine();
@@ -76,6 +88,7 @@ class GameBoy {
 
 	void interruptHandler();
 	bool testInterruptEnabled(Byte interrupt) const;
+	void setInterrupt(Byte interrupt);
 	void resetInterrupt(Byte interrupt);
 
 	void VBlankHandle();

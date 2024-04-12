@@ -391,7 +391,11 @@ void GameBoy::swap(Byte& value) {
 	resetFlag(CARRY_FLAG);
 }
 
-void GameBoy::halt() {}
+void GameBoy::halt() {
+	halted = true;
+	if (!IME && addressSpace.memoryLayout.IE & addressSpace.memoryLayout.IF)
+		haltBug = true;
+}
 
 void GameBoy::rrc(Byte& reg) {
 	const Byte lsb = reg & 0x01;
@@ -652,7 +656,9 @@ void GameBoy::ccf() {
 	resetFlag(HALFCARRY_FLAG);
 }
 
-void GameBoy::stop() {}
+void GameBoy::stop() {
+	stopped = true;
+}
 
 void GameBoy::opcodeResolver() {
 	if (readOnlyAddressSpace[PC] != 0xCB) {
@@ -1955,7 +1961,7 @@ void GameBoy::opcodeResolver() {
 			}
 			else {
 				addCycles(8);
-				PC += 3;
+				PC += 1;
 			}
 			break;
 

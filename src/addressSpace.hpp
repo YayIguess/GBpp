@@ -40,9 +40,9 @@ public:
 		//Timer registers
 		Byte TIMA;
 		Byte TMA;
-		Byte TAC;
+		Byte TAC = 0xF8;
 		//interrupt flag and enable
-		Byte IF;
+		Byte IF = 0xE1;;
 		//Sound registers
 		Byte NR10;
 		Byte NR11;
@@ -158,7 +158,6 @@ public:
 				return memoryLayout.SB;
 			case 0xFF02:
 				return memoryLayout.SC;
-			// Timer registers
 			case 0xFF04:
 				return memoryLayout.DIV;
 			case 0xFF05:
@@ -166,11 +165,9 @@ public:
 			case 0xFF06:
 				return memoryLayout.TMA;
 			case 0xFF07:
-				return memoryLayout.TAC;
-			// Interrupt flag
+				return memoryLayout.TAC | 0xF8;;
 			case 0xFF0F:
-				return memoryLayout.IF;
-			// Sound registers
+				return memoryLayout.IF | 0xE0;
 			case 0xFF10:
 				return memoryLayout.NR10;
 			case 0xFF11:
@@ -223,6 +220,8 @@ public:
 			case 0xFF43:
 				return memoryLayout.SCX;
 			case 0xFF44:
+				//for debugging only
+				//return 0x90;
 				return memoryLayout.LY;
 			case 0xFF45:
 				return memoryLayout.LYC;
@@ -238,7 +237,6 @@ public:
 				return memoryLayout.WY;
 			case 0xFF4B:
 				return memoryLayout.WX;
-
 			default:
 				if (address >= 0xFF30 && address <= 0xFF3F) {
 					return memoryLayout.waveRam[address - 0xFF30];
@@ -253,6 +251,7 @@ public:
 
 	//write
 	Byte& operator[](const Word address) {
+		dummyVal = 0xFF;
 		if (testing)
 			return testRam[address];
 		if (address < 0x0100 && bootromLoaded)
@@ -282,19 +281,17 @@ public:
 			case 0xFF02:
 				return memoryLayout.SC;
 			case 0xFF04:
-				return memoryLayout.DIV;
+				memoryLayout.DIV = 0;
+				return dummyVal;
 			// Timer registers
 			case 0xFF05:
 				return memoryLayout.TIMA;
-			// The address 0xFF15 is mentioned as unused, possibly a mistake? Original has TMA = 0xFF06 typically.
 			case 0xFF06:
 				return memoryLayout.TMA;
 			case 0xFF07:
 				return memoryLayout.TAC;
-			// Interrupt flag
 			case 0xFF0F:
 				return memoryLayout.IF;
-			// Sound registers
 			case 0xFF10:
 				return memoryLayout.NR10;
 			case 0xFF11:
@@ -337,7 +334,6 @@ public:
 				return memoryLayout.NR51;
 			case 0xFF26:
 				return memoryLayout.NR52;
-			// PPU registers
 			case 0xFF40:
 				return memoryLayout.LCDC;
 			case 0xFF41:
@@ -347,7 +343,8 @@ public:
 			case 0xFF43:
 				return memoryLayout.SCX;
 			case 0xFF44:
-				return memoryLayout.LY;
+				dummyVal = memoryLayout.LY;
+				return dummyVal;
 			case 0xFF45:
 				return memoryLayout.LYC;
 			case 0xFF46:
@@ -362,7 +359,6 @@ public:
 				return memoryLayout.WY;
 			case 0xFF4B:
 				return memoryLayout.WX;
-
 			default:
 				if (address >= 0xFF30 && address <= 0xFF3F) {
 					return memoryLayout.waveRam[address - 0xFF30];

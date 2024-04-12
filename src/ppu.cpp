@@ -4,33 +4,45 @@
 #include <cstdint>
 #include <iostream>
 
+bool GameBoy::testLCDCBitEnabled(const Byte bit) const {
+	return readOnlyAddressSpace.memoryLayout.LCDC & static_cast<Byte>(1 << bit);
+}
+
 void GameBoy::ppuUpdate() {
 	//test for HBlank
 	checkPPUMode();
 
-	if (readOnlyAddressSpace.memoryLayout.LY == readOnlyAddressSpace.memoryLayout.LYC || readOnlyAddressSpace.
-		memoryLayout.STAT & (1 << 6)) {
-		// Request STAT interrupt if LY matches LYC
-		// bug on DMG models triggers a STAT interrupt anytime the STAT register is written
-		// Road Rage and Zerd no Denetsu rely on this
+	// TODO:
+	// bug on DMG models triggers a STAT interrupt anytime the STAT register is written
+	// Road Rage and Zerd no Denetsu rely on this
+
+	// Check for STAT interrupts and request if needed (e.g., when entering specific modes)
+	const bool hBlankInterruptEnabled = readOnlyAddressSpace.memoryLayout.STAT & (1 << 3);
+	const bool drawingInterruptEnabled = readOnlyAddressSpace.memoryLayout.STAT & (1 << 4);
+	const bool oamInterruptEnabled = readOnlyAddressSpace.memoryLayout.STAT & (1 << 5);
+	const bool previousInterruptLine = statInteruptLine;
+
+	if (currentMode == PPUMode::mode0 && hBlankInterruptEnabled ||
+		currentMode == PPUMode::mode3 && drawingInterruptEnabled ||
+		currentMode == PPUMode::mode2 && oamInterruptEnabled) {
+		statInteruptLine = true;
+	}
+	else {
+		statInteruptLine = false;
+	}
+
+	const bool lyLycInterruptEnabled = readOnlyAddressSpace.memoryLayout.STAT & (1 << 6);
+
+	if (readOnlyAddressSpace.memoryLayout.LY == readOnlyAddressSpace.memoryLayout.LYC) {
 		addressSpace.memoryLayout.STAT |= (1 << 2);
+		if (lyLycInterruptEnabled)
+			statInteruptLine = true;
 	}
 	else {
 		addressSpace.memoryLayout.STAT &= ~(1 << 2);
 	}
-
-	// Check for STAT interrupts and request if needed (e.g., when entering specific modes)
-	bool hBlankInterruptEnabled = readOnlyAddressSpace.memoryLayout.STAT & (1 << 3);
-	bool vBlankInterruptEnabled = readOnlyAddressSpace.memoryLayout.STAT & (1 << 4);
-	/* Determine if VBlank interrupt is enabled */
-	bool oamInterruptEnabled = readOnlyAddressSpace.memoryLayout.STAT & (1 << 5);
-	/* Determine if OAM Search interrupt is enabled */
-
-	if (currentMode == PPUMode::mode0 && hBlankInterruptEnabled ||
-		currentMode == PPUMode::mode1 && vBlankInterruptEnabled ||
-		currentMode == PPUMode::mode2 && oamInterruptEnabled) {
-		addressSpace.memoryLayout.IF |= 0x2;
-	}
+	if (statInteruptLine && !previousInterruptLine)
+		addressSpace.memoryLayout.IF |= 1 << LCD_STAT_INTERRUPT;
 }
 
 void GameBoy::checkPPUMode() {
@@ -38,7 +50,7 @@ void GameBoy::checkPPUMode() {
 	const uint64_t cyclesSinceScanline = cyclesSinceLastScanline();
 
 	switch (currentMode) {
-	//hblank and vblank
+	//hblank AND vblank
 	case 0:
 	case 1:
 		if (cyclesSinceScanline > SCANLINE_DURATION) {
@@ -65,6 +77,7 @@ void GameBoy::incLY() {
 	setPPUMode(PPUMode::mode2);
 	if (addressSpace.memoryLayout.LY > SCANLINES_PER_FRAME - 1) {
 		addressSpace.memoryLayout.LY = 0;
+		windowLineCounter = 0;
 	}
 	else if (addressSpace.memoryLayout.LY == 144) {
 		// VBlank Period
@@ -118,58 +131,126 @@ void GameBoy::drawLine() {
 
 	// Pointer to the current line's pixel data in the framebuffer
 	uint32_t* currentLinePixels = framebuffer + lineStartIndex;
+	std::fill_n(currentLinePixels, RESOLUTION_X, 0xFFFFFFFF);
 
-	if (!(readOnlyAddressSpace.memoryLayout.LCDC & 0x1)) {
-		std::fill_n(currentLinePixels, RESOLUTION_X, 0xFFFFFFFF); // Fill line with white if BG display is off.
-		return;
-	}
 
-	const uint16_t backgroundMapAddr = (readOnlyAddressSpace.memoryLayout.LCDC & 0x08) ? 0x9C00 : 0x9800;
-	const uint16_t tileDataTableAddr = (readOnlyAddressSpace.memoryLayout.LCDC & 0x10) ? 0x8000 : 0x8800;
-	const bool signedIndex = !(readOnlyAddressSpace.memoryLayout.LCDC & 0x10);
+	const uint16_t backgroundMapAddr = testLCDCBitEnabled(BG_TILE_MAP_AREA) ? 0x9C00 : 0x9800;
+	const uint16_t windowMapAddr = testLCDCBitEnabled(WINDOW_TILE_MAP_AREA) ? 0x9C00 : 0x9800;
+	const uint16_t tileDataTableAddr = testLCDCBitEnabled(BG_WINDOW_TILE_DATA_AREA) ? 0x8000 : 0x8800;
+	const bool signedIndex = !testLCDCBitEnabled(BG_WINDOW_TILE_DATA_AREA);
 
-	for (int pixel = 0; pixel < RESOLUTION_X; pixel++) {
-		const uint8_t xPos = (pixel + readOnlyAddressSpace.memoryLayout.SCX) % 256; // 256 pixels in total BG width
-		const uint8_t yPos = (line + readOnlyAddressSpace.memoryLayout.SCY) % 256; // 256 pixels in total BG height
+	//BG
+	if (testLCDCBitEnabled(BG_WINDOW_ENABLE)) {
+		for (int pixel = 0; pixel < RESOLUTION_X; pixel++) {
+			const uint16_t xIndex = (pixel + readOnlyAddressSpace.memoryLayout.SCX) % 256;
+			// 256 pixels in total BG width
+			const uint16_t yIndex = (line + readOnlyAddressSpace.memoryLayout.SCY) % 256;
+			// 256 pixels in total BG height
 
-		const uint16_t tileRow = (yPos / 8) * 32;
-		const uint16_t tileCol = xPos / 8;
-		const uint16_t tileIndex = tileRow + tileCol;
+			const uint16_t tileUpper = (yIndex / 8) << 5;
+			const uint16_t tileLower = xIndex / 8 & 0x1F;
+			const uint16_t tileIndex = tileUpper + tileLower;
 
-		const uint16_t tileAddr = backgroundMapAddr + tileIndex;
-		const int8_t tileID = signedIndex
-			                      ? static_cast<int8_t>(readOnlyAddressSpace[tileAddr])
-			                      : addressSpace[tileAddr];
+			const uint16_t tileAddr = backgroundMapAddr + tileIndex;
+			const int16_t tileID = signedIndex
+				                       ? static_cast<int16_t>(readOnlyAddressSpace[tileAddr])
+				                       : readOnlyAddressSpace[tileAddr];
 
-		uint16_t tileDataAddr;
-		if (signedIndex) {
-			tileDataAddr = tileDataTableAddr + (((tileID + 128) % 256) * 16); // For signed, wrap around
+			uint16_t tileDataAddr;
+			if (signedIndex)
+				tileDataAddr = tileDataTableAddr + (((tileID + 128) % 256) << 4); // For signed, wrap around
+			else
+				tileDataAddr = tileDataTableAddr + (tileID * 16);
+
+
+			const uint8_t lineOffset = yIndex % 8;
+			const uint8_t tileRowData1 = readOnlyAddressSpace[tileDataAddr + (lineOffset * 2)];
+			const uint8_t tileRowData2 = readOnlyAddressSpace[tileDataAddr + (lineOffset * 2) + 1];
+
+			//get pixel data (2 bits)
+			const uint8_t colourBit = 7 - (xIndex % 8);
+			const uint8_t colourNum = ((tileRowData2 >> colourBit) & 0x1) << 1 | ((tileRowData1 >> colourBit) & 0x1);
+
+			// Apply the BGP register for palette mapping
+			const uint8_t palette = (readOnlyAddressSpace.memoryLayout.BGP >> (colourNum * 2)) & 0x3;
+
+			switch (palette) {
+			case 0:
+				currentLinePixels[pixel] = 0xFFFFFFFF;
+				break; // White
+			case 1:
+				currentLinePixels[pixel] = 0xFFAAAAAA;
+				break; // Light gray
+			case 2:
+				currentLinePixels[pixel] = 0xFF555555;
+				break; // Dark gray
+			case 3:
+				currentLinePixels[pixel] = 0xFF000000;
+				break; // Black
+			default:
+				break; // Default case for safety, should not be reached
+			}
 		}
-		else {
-			tileDataAddr = tileDataTableAddr + (tileID * 16);
-		}
 
-		const uint8_t lineOffset = yPos % 8;
-		const uint8_t tileRowData1 = readOnlyAddressSpace[tileDataAddr + (lineOffset * 2)];
-		const uint8_t tileRowData2 = readOnlyAddressSpace[tileDataAddr + (lineOffset * 2) + 1];
+		// 	For the window to be displayed on a scanline, the following conditions must be met:
+		// WY condition was triggered: i.e. at some point in this frame the value of WY was equal to LY (checked at the start of Mode 2 only)
+		// WX condition was triggered: i.e. the current X coordinate being rendered + 7 was equal to WX
+		// Window enable bit in LCDC is set
+		//Window
+		const uint8_t windowY = readOnlyAddressSpace.memoryLayout.WY;
+		const int16_t windowX = readOnlyAddressSpace.memoryLayout.WX - 7;
+		if (testLCDCBitEnabled(WINDOW_ENABLE) && windowX >= 0 && line >= windowY) {
+			for (int pixel = windowX; pixel < RESOLUTION_X; pixel++) {
+				const uint16_t yIndex = line - windowY;
+				const uint16_t windowTileUpper = (yIndex / 8) << 5;
 
-		const uint8_t colourBit = 7 - (xPos % 8);
-		const uint8_t colourNum = ((tileRowData2 >> colourBit) & 0x1) << 1 | ((tileRowData1 >> colourBit) & 0x1);
+				const uint16_t xIndex = pixel - windowX;
+				const uint16_t windowTileLower = (xIndex / 8) & 0x1F;
 
-		// Apply the BGP register for palette mapping
-		uint8_t palette = (readOnlyAddressSpace.memoryLayout.BGP >> (colourNum * 2)) & 0x3;
-		if (xPos == 0)
-			palette = 0x3;
-		switch (palette) {
-		case 0: currentLinePixels[pixel] = 0xFFFFFFFF;
-			break; // White
-		case 1: currentLinePixels[pixel] = 0xAAAAAAFF;
-			break; // Light gray
-		case 2: currentLinePixels[pixel] = 0x555555FF;
-			break; // Dark gray
-		case 3: currentLinePixels[pixel] = 0x000000FF;
-			break; // Black
-		default: break; // Default case for safety, should not be reached
+				const uint16_t tileIndex = windowTileUpper + windowTileLower;
+				const uint16_t tileAddr = windowMapAddr + tileIndex;
+
+				const int16_t tileID = signedIndex
+					                       ? static_cast<int16_t>(readOnlyAddressSpace[tileAddr])
+					                       : readOnlyAddressSpace[tileAddr];
+
+				uint16_t tileDataAddr;
+				if (signedIndex)
+					tileDataAddr = tileDataTableAddr + (((tileID + 128) % 256) * 16); // For signed, wrap around
+				else
+					tileDataAddr = tileDataTableAddr + (tileID * 16);
+
+
+				const uint8_t lineOffset = yIndex % 8;
+				const uint8_t tileRowData1 = readOnlyAddressSpace[tileDataAddr + (lineOffset * 2)];
+				const uint8_t tileRowData2 = readOnlyAddressSpace[tileDataAddr + (lineOffset * 2) + 1];
+
+				//get pixel data (2 bits)
+				const uint8_t colourBit = 7 - (xIndex % 8);
+				const uint8_t colourNum = ((tileRowData2 >> colourBit) & 0x1) << 1 | ((tileRowData1 >> colourBit) &
+					0x1);
+
+				// Apply the BGP register for palette mapping
+				const uint8_t palette = (readOnlyAddressSpace.memoryLayout.BGP >> (colourNum * 2)) & 0x3;
+
+				switch (palette) {
+				case 0:
+					currentLinePixels[pixel] = 0xFFFFFFFF;
+					break; // White
+				case 1:
+					currentLinePixels[pixel] = 0xFFAAAAAA;
+					break; // Light gray
+				case 2:
+					currentLinePixels[pixel] = 0xFF555555;
+					break; // Dark gray
+				case 3:
+					currentLinePixels[pixel] = 0xFF000000;
+					break; // Black
+				default:
+					break; // Default case for safety, should not be reached
+				}
+				windowLineCounter += 1;
+			}
 		}
 	}
 }

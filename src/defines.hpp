@@ -31,6 +31,15 @@
 #define RESOLUTION_Y 144
 #define SCREEN_BPP 3
 
+#define BG_WINDOW_ENABLE 0
+#define OBJ_ENABLE 1
+#define OBJ_SIZE 2
+#define BG_TILE_MAP_AREA 3
+#define BG_WINDOW_TILE_DATA_AREA 4
+#define WINDOW_ENABLE 5
+#define WINDOW_TILE_MAP_AREA 6
+#define LCD_ENABLE 7
+
 #define ROM_BANK_SIZE 0x4000
 #define RAM_BANK_SIZE 0x2000
 
@@ -53,6 +62,17 @@ enum Colour {
 	darkGray = 0b10,
 	lightGray = 0b01,
 	white = 0b00
+};
+
+struct Input {
+	bool UP = false;
+	bool DOWN = false;
+	bool LEFT = false;
+	bool RIGHT = false;
+	bool B = false;
+	bool A = false;
+	bool START = false;
+	bool SELECT = false;
 };
 
 enum MBCType {
