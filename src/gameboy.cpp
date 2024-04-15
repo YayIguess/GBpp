@@ -54,6 +54,7 @@ void GameBoy::start(const std::string& bootrom, const std::string& game) {
 	bool quit = false;
 	bool setIME = false;
 	bool debug = false;
+	bool step = false;
 
 	while (!quit) {
 		// Event loop
@@ -89,7 +90,10 @@ void GameBoy::start(const std::string& bootrom, const std::string& game) {
 					joypadInput.START = true;
 					break;
 				case SDLK_h:
-					debug = true;
+					debug = !debug;
+					break;
+				case SDLK_n:
+					step = true;
 					break;
 				default:
 					break;
@@ -121,9 +125,6 @@ void GameBoy::start(const std::string& bootrom, const std::string& game) {
 				case SDLK_p:
 					joypadInput.START = false;
 					break;
-				case SDLK_h:
-					debug = false;
-					break;
 				default:
 					break;
 				}
@@ -134,6 +135,9 @@ void GameBoy::start(const std::string& bootrom, const std::string& game) {
 		}
 
 		while (!rendered) {
+			if (debug == true && step == false)
+				break;
+			step = false;
 			joypadHandler();
 			if (PC > 0xFF && addressSpace.getBootromState()) {
 				addressSpace.unmapBootrom();
