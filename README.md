@@ -9,7 +9,9 @@ Does not currently support MBC3 (needed for games like Pokemon) or loading saves
 
 ## Building
 `mkdir build && cd build`
+
 `cmake ..`
+
 `./GameBoy++ <bios> <rom>`
 
 ## Controls
