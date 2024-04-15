@@ -106,6 +106,9 @@ public:
 	uint32_t externalRamSize = 0;
 	uint32_t externalRamBanks = 0;
 
+	bool dmaTransferRequested = false;
+	void dmaTransfer();
+
 	//Selected ROM Bank = (Secondary Bank << 5) + ROM Bank
 	Byte selectedRomBank = 0;
 	Byte romBankRegister = 0x00;
@@ -348,6 +351,7 @@ public:
 			case 0xFF45:
 				return memoryLayout.LYC;
 			case 0xFF46:
+				dmaTransferRequested = true;
 				return memoryLayout.DMA;
 			case 0xFF47:
 				return memoryLayout.BGP;

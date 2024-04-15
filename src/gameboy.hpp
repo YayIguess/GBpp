@@ -24,7 +24,7 @@ class GameBoy {
 	//Start at 2 T-cycles https://github.com/Gekkio/mooneye-test-suite/blob/main/acceptance/ppu/lcdon_timing-GS.s
 	uint64_t ppuCycles = 2;
 	bool ppuEnabled = false;
-	uint64_t lastOpTicks = 0;
+	uint16_t lastOpTicks = 0;
 	uint64_t lastRefresh = 0;
 	uint64_t lastScanline = 0;
 	uint64_t cyclesToStayInHblank = -1;
@@ -51,6 +51,7 @@ class GameBoy {
 
 	PPUMode currentMode = PPUMode::mode0;
 	Byte windowLineCounter = 0;
+	int16_t cyclesUntilDMATransfer = 160;
 
 	Byte prevTMA = 0;
 	uint64_t lastTIMAUpdate = 0;
@@ -73,10 +74,12 @@ class GameBoy {
 	void opcodeResolver();
 
 	bool statInteruptLine = false;
-	bool testLCDCBitEnabled(Byte bit) const;
+	bool LCDCBitEnabled(Byte bit) const;
 	void incLY();
 	void ppuUpdate();
 	void drawLine();
+	static bool oamBitEnabled(Byte oamAttributeByte, Byte bit);
+	static unsigned int getColourFromPalette(Byte palette);
 	void SDL2present();
 
 	void checkPPUMode();
@@ -172,7 +175,7 @@ class GameBoy {
 	void swap(Byte& value);
 
 public:
-	void start(std::string bootrom, std::string game);
+	void start(const std::string& bootrom, const std::string& game);
 	void SDL2setup();
 	void SDL2destroy() const;
 

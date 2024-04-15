@@ -31,6 +31,7 @@
 #define RESOLUTION_Y 144
 #define SCREEN_BPP 3
 
+//lcdc
 #define BG_WINDOW_ENABLE 0
 #define OBJ_ENABLE 1
 #define OBJ_SIZE 2
@@ -39,6 +40,13 @@
 #define WINDOW_ENABLE 5
 #define WINDOW_TILE_MAP_AREA 6
 #define LCD_ENABLE 7
+
+//oam
+#define PRIORITY 7
+#define Y_FLIP 6
+#define X_FLIP 5
+#define OBJ_PALETTE 4
+
 
 #define ROM_BANK_SIZE 0x4000
 #define RAM_BANK_SIZE 0x2000
@@ -56,13 +64,10 @@
 #define SCANLINE_OAM_FREQ 80 //PPU_MODE 2
 #define SCANLINE_VRAM_FREQ 80 //PPU_MODE 3
 
-//two bits per colour
-enum Colour {
-	black = 0b11,
-	darkGray = 0b10,
-	lightGray = 0b01,
-	white = 0b00
-};
+#define WHITE 0xFFFFFFFF;
+#define LIGHT_GRAY 0xFFAAAAAA;
+#define DARK_GRAY 0xFF555555;
+#define BLACK 0xFF000000
 
 struct Input {
 	bool UP = false;

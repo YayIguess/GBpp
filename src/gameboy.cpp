@@ -45,7 +45,7 @@ GameboyTestState GameBoy::runTest(GameboyTestState initial) {
 }
 
 
-void GameBoy::start(std::string bootrom, std::string game) {
+void GameBoy::start(const std::string& bootrom, const std::string& game) {
 	addressSpace.loadBootrom(bootrom);
 	addressSpace.loadGame(game);
 	addressSpace.determineMBCInfo();
@@ -94,8 +94,6 @@ void GameBoy::start(std::string bootrom, std::string game) {
 				// 	printf("LCDC:%.2x STAT:0x%.2x LY:%d LYC:%d\n", (*LCDC), (*STAT), (*LY), (*LYC));
 				// 	printf("\n");
 			}
-			// if (PC >= 0xf000)
-			// 	exit(1);
 
 
 			if (!halted) {
@@ -124,6 +122,13 @@ void GameBoy::start(std::string bootrom, std::string game) {
 			if (IME_togge) {
 				setIME = true;
 				IME_togge = false;
+			}
+			if (addressSpace.dmaTransferRequested) {
+				cyclesUntilDMATransfer -= lastOpTicks;
+				if (cyclesUntilDMATransfer <= 0) {
+					cyclesUntilDMATransfer = 160;
+					addressSpace.dmaTransfer();
+				}
 			}
 		}
 		rendered = false;

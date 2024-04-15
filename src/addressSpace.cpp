@@ -46,6 +46,15 @@ void AddressSpace::loadGame(const std::string& filename) {
 	memoryLayout.romBankSwitch = game.data() + ROM_BANK_SIZE;
 }
 
+void AddressSpace::dmaTransfer() {
+	dmaTransferRequested = false;
+	const Word addr = memoryLayout.DMA << 8;
+	for (int i = 0; i < 0xA0; i++) {
+		const Byte data = (*this)[addr + i];;
+		(*this)[0xFE00 + i] = data;
+	}
+}
+
 void AddressSpace::setTesting(const bool state) {
 	testing = state;
 }
