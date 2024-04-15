@@ -70,6 +70,7 @@ class GameBoy {
 	const int frameDelay = 1000 / V_SYNC;
 
 	Input joypadInput;
+	void joypadHandler();
 
 	void opcodeResolver();
 

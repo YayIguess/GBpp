@@ -336,7 +336,7 @@ void GameBoy::drawLine() {
 					const uint32_t finalColor = getColourFromPalette(paletteColor);
 					oamPixels[pixel] = finalColor;
 				}
-				else {
+				else if (oamPixels[pixel] == 0) {
 					oamPixels[pixel] = currentLinePixels[pixel];
 				}
 			}

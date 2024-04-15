@@ -33,9 +33,9 @@ public:
 		Byte oam[0xA0]; //Mapped to 0xFE00
 		Byte notUsable[0x60]; //Mapped to 0xFEA0
 		//General purpose hardware registers
-		Byte JOYP;
+		Byte JOYP = 0xCF;
 		Byte SB;
-		Byte SC;
+		Byte SC = 0x7E;
 		Byte DIV;
 		//Timer registers
 		Byte TIMA;
@@ -263,8 +263,11 @@ public:
 			return (*MBCRead(address));
 		if (address < 0xA000)
 			return memoryLayout.vram[address - 0x8000];
-		if (address < 0xC000)
+		if (address < 0xC000) {
+			if (externalRamSize == 0)
+				return dummyVal;
 			return memoryLayout.externalRam[address - 0xA000];
+		}
 		if (address < 0xD000)
 			return memoryLayout.memoryBank1[address - 0xC000];
 		if (address < 0xE000)

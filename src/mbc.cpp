@@ -5,7 +5,8 @@ void AddressSpace::determineMBCInfo() {
 	romSize = 32768 * (1 << memoryLayout.romBank0[0x147]);
 	romBanks = 1 << (memoryLayout.romBank0[0x147] + 1);
 
-	switch (memoryLayout.romBank0[0x0149]) {
+	const Byte ramSize = memoryLayout.romBank0[0x0149];
+	switch (ramSize) {
 	case 0x02:
 		externalRamSize = 8196;
 		externalRamBanks = 1;
@@ -96,23 +97,19 @@ void AddressSpace::MBCUpdate() {
 }
 
 void AddressSpace::loadRomBank() {
-	Byte* old = memoryLayout.romBankSwitch;
 	memoryLayout.romBankSwitch = game.data() + (ROM_BANK_SIZE * selectedRomBank);
-	if (old != memoryLayout.romBankSwitch)
-		printf("\n");
 }
 
 void AddressSpace::createRamBank() {
-	if (externalRamSize)
+	if (externalRamSize) {
 		cartridgeRam = new Byte[externalRamSize];
+		memoryLayout.externalRam = cartridgeRam;
+	}
 }
 
 void AddressSpace::loadRamBank() {
-	Byte* old = memoryLayout.externalRam;
 	if (cartridgeRam != nullptr)
 		memoryLayout.externalRam = cartridgeRam + (RAM_BANK_SIZE * selectedExternalRamBank);
-	if (old != memoryLayout.externalRam)
-		printf("\n");
 }
 
 

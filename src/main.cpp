@@ -11,8 +11,8 @@ void runJSONTests(GameBoy* gb);
 
 int main(int argc, char** argv) {
 	if (argc != 3) {
-		std::cout << "Usage: " << argv[0] << " <bios> <game>" << std::endl;
-		return -1;
+		std::cerr << "Usage: " << argv[0] << " <bios> <game>\n" << std::endl;
+		return 1;
 	}
 
 	auto* gb = new GameBoy();
