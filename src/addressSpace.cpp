@@ -16,11 +16,18 @@ void AddressSpace::mapBootrom() {
 
 void AddressSpace::loadBootrom(const std::string& filename) {
 	std::ifstream file;
-	if (const uintmax_t size = std::filesystem::file_size(filename); size != 256) {
+	file.open(filename, std::ios::binary);
+
+	if (!file.is_open()) {
+		std::cerr << "Bootrom was not found!\nQuitting!\n" << std::endl;
+		exit(1);
+	}
+
+	const uintmax_t size = std::filesystem::file_size(filename);
+	if (size != 256) {
 		std::cerr << "Bootrom was an unexpected size!\nQuitting!\n" << std::endl;
 		exit(1);
 	}
-	file.open(filename, std::ios::binary);
 	file.read(reinterpret_cast<char*>(bootrom), BOOTROM_SIZE);
 }
 

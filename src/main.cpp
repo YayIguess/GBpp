@@ -10,10 +10,15 @@ using json = nlohmann::json;
 void runJSONTests(GameBoy* gb);
 
 int main(int argc, char** argv) {
+	if (argc != 3) {
+		std::cout << "Usage: " << argv[0] << " <bios> <game>" << std::endl;
+		return -1;
+	}
+
 	auto* gb = new GameBoy();
 	gb->SDL2setup();
 	//runJSONTests(gb);
-	gb->start("../dmg_boot.bin", "../roms/DrMario.gb");
+	gb->start(argv[1], argv[2]);
 	gb->SDL2destroy();
 	delete gb;
 

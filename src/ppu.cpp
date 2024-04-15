@@ -352,7 +352,7 @@ void GameBoy::drawLine() {
 
 void GameBoy::SDL2setup() {
 	SDL_Init(SDL_INIT_EVERYTHING);
-	screen = SDL_CreateWindow("GBpp",
+	screen = SDL_CreateWindow("GameBoy++",
 	                          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 	                          RESOLUTION_X, RESOLUTION_Y,
 	                          0);
