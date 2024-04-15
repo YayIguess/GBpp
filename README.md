@@ -18,3 +18,6 @@ Does not currently support MBC3 (needed for games like Pokemon) or loading saves
 WASD is mapped to the d-pad
 K and L are mapped to A and B
 O and P are mapped to select and start
+
+H enters and exits debug mode
+N steps through one instruction
