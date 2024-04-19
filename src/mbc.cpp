@@ -68,16 +68,37 @@ Byte* AddressSpace::MBCRead(const Word address) {
 }
 
 void AddressSpace::MBCUpdate() {
+	//TODO: multicart roms need to be able to switch the first rom bank as well
+	//see: https://gbdev.io/pandocs/MBC1.html
 	if (MBC == MBC1) {
-		//TODO: multicart roms need to be able to switch the first rom bank as well
-		//see: https://gbdev.io/pandocs/MBC1.html
-
 		//Selected ROM Bank = (Secondary Bank << 5) + ROM Bank
 		romBankRegister &= 0x1F;
 		twoBitBankRegister &= 0x3;
 
 		//512 KiB can only have 8KiB of ram
-		if (romSize > 524288) {
+		if (romSize >= 524288) {
+			if (romBankRegister == 0)
+				selectedRomBank = (twoBitBankRegister << 5) + 1;
+			selectedRomBank = (twoBitBankRegister << 5) + romBankRegister;
+		}
+		else {
+			if (romBankRegister == 0)
+				selectedRomBank = 1;
+			else
+				selectedRomBank = romBankRegister;
+		}
+		selectedExternalRamBank = 0;
+
+		loadRomBank();
+		loadRamBank();
+	}
+	if (MBC == MBC1Ram || MBC == MBC1RamBattery) {
+		//Selected ROM Bank = (Secondary Bank << 5) + ROM Bank
+		romBankRegister &= 0x1F;
+		twoBitBankRegister &= 0x3;
+
+		//512 KiB can only have 8KiB of ram
+		if (romSize >= 524288) {
 			if (romBankRegister == 0)
 				selectedRomBank = (twoBitBankRegister << 5) + 1;
 			selectedRomBank = (twoBitBankRegister << 5) + romBankRegister;
@@ -93,7 +114,6 @@ void AddressSpace::MBCUpdate() {
 		loadRomBank();
 		loadRamBank();
 	}
-	if (MBC == MBC1Ram || MBC == MBC1RamBattery) {}
 }
 
 void AddressSpace::loadRomBank() {
